@@ -3,7 +3,27 @@ import react from '@vitejs/plugin-react-swc'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Enable JSX in .js files
+      include: "**/*.{jsx,js}",
+    })
+  ],
+  
+  // Configure esbuild to handle JSX in .js files
+  esbuild: {
+    loader: 'jsx',
+    include: /src\/.*\.[jt]sx?$/,
+    exclude: []
+  },
+  
+  optimizeDeps: {
+    esbuildOptions: {
+      loader: {
+        '.js': 'jsx',
+      },
+    },
+  },
   
   // Environment-specific configuration
   define: {
