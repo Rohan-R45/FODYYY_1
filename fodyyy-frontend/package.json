@@ -4,13 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:5174": "vite --port 5174",
-    "dev:5175": "vite --port 5175",
-    "build": "vite build",
+    "dev": "vite --mode development",
+    "dev:5174": "vite --port 5174 --mode development",
+    "dev:5175": "vite --port 5175 --mode development",
+    "build": "vite build --mode production",
+    "build:dev": "vite build --mode development",
+    "build:analyze": "vite build --mode production && npx vite-bundle-analyzer dist/stats.html",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "preview:5175": "vite preview --port 5175"
+    "preview:5175": "vite preview --port 5175",
+    "clean": "rm -rf dist",
+    "postbuild": "echo 'Frontend build complete'"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

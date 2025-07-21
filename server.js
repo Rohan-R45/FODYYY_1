@@ -1,27 +1,66 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const slowDown = require('express-slow-down');
+
+// Import configuration and utilities
+const config = require('./config');
+const logger = require('./utils/logger');
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Trust proxy for production deployments
+if (config.TRUST_PROXY) {
+  app.set('trust proxy', 1);
+}
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: config.isProduction() ? undefined : false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// Compression middleware for production
+if (config.isProduction()) {
+  app.use(compression());
+}
+
+// Request logging
+app.use(logger.requestLogger());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: config.RATE_LIMIT_WINDOW_MS,
+  max: config.RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000)
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', limiter);
+
+// Speed limiting for auth routes
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  delayAfter: 5, // allow 5 requests per windowMs without delay
+  delayMs: 500 // add 500ms delay per request after delayAfter
+});
+
+app.use('/api/auth/', speedLimiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001', 
-    'http://localhost:5174', // Default Vite dev port
-    'http://localhost:5175', // Alternative Vite port
-    'http://localhost:4173', // Vite preview port (legacy)
-    'http://127.0.0.1:5174',
-    'http://127.0.0.1:5175'
-  ],
+  origin: config.ALLOWED_ORIGINS,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -30,13 +69,14 @@ app.use(cors({
 // MongoDB connection with improved error handling
 const connectDB = async () => {
   try {
-    // Remove deprecated options - they're no longer needed in newer versions
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/fodyyy');
+    const conn = await mongoose.connect(config.MONGODB_URI);
     
-    console.log(`✅ MongoDB connected successfully!`);
-    console.log(`   Host: ${conn.connection.host}`);
-    console.log(`   Database: ${conn.connection.name}`);
-    console.log(`   Port: ${conn.connection.port}`);
+    logger.info('MongoDB connected successfully', {
+      host: conn.connection.host,
+      database: conn.connection.name,
+      port: conn.connection.port,
+      environment: config.NODE_ENV
+    });
     
   } catch (error) {
     console.error('❌ MongoDB connection failed:');
