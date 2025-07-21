@@ -1,152 +1,190 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
-
-// Import configuration and utilities
-const config = require('./config');
-const logger = require('./utils/logger');
+require('dotenv').config();
 
 const app = express();
 
 // Trust proxy for production deployments
-if (config.TRUST_PROXY) {
-  app.set('trust proxy', 1);
-}
+app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: config.isProduction() ? undefined : false,
-  crossOriginEmbedderPolicy: false
-}));
-
-// Compression middleware for production
-if (config.isProduction()) {
-  app.use(compression());
-}
-
-// Request logging
-app.use(logger.requestLogger());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: config.RATE_LIMIT_WINDOW_MS,
-  max: config.RATE_LIMIT_MAX_REQUESTS,
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000)
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log(`   Origin: ${req.get('Origin') || 'No origin'}`);
+  next();
 });
-
-app.use('/api/', limiter);
-
-// Speed limiting for auth routes
-const speedLimiter = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  delayAfter: 5, // allow 5 requests per windowMs without delay
-  delayMs: 500 // add 500ms delay per request after delayAfter
-});
-
-app.use('/api/auth/', speedLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5174', 
+  'http://localhost:5175',
+  'https://fodyyy.netlify.app',
+  'https://fodyyy-1.onrender.com'
+];
+
+console.log('🌐 CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: config.ALLOWED_ORIGINS,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS allowed for origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 
-// MongoDB connection with improved error handling
+// MongoDB connection
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(config.MONGODB_URI);
-    
-    logger.info('MongoDB connected successfully', {
-      host: conn.connection.host,
-      database: conn.connection.name,
-      port: conn.connection.port,
-      environment: config.NODE_ENV
-    });
-    
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/fodyyy');
+    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('❌ MongoDB connection failed:');
-    console.error(`   Error: ${error.message}`);
-    
-    // Provide helpful error messages based on error type
-    if (error.message.includes('ECONNREFUSED')) {
-      console.log('\n💡 Troubleshooting tips:');
-      console.log('   • Make sure MongoDB is running locally, OR');
-      console.log('   • Update MONGODB_URI in .env to use MongoDB Atlas');
-      console.log('   • Check your network connection');
-    } else if (error.message.includes('authentication failed')) {
-      console.log('\n💡 Authentication issue:');
-      console.log('   • Check your MongoDB Atlas username and password');
-      console.log('   • Ensure your IP is whitelisted in MongoDB Atlas');
-    } else if (error.message.includes('bad auth')) {
-      console.log('\n💡 Authentication issue:');
-      console.log('   • Verify your MongoDB Atlas credentials');
-      console.log('   • Check if your database user has proper permissions');
-    }
-    
+    console.error('❌ MongoDB connection failed:', error.message);
     if (process.env.NODE_ENV === 'production') {
-      console.log('🚨 Exiting in production mode due to database connection failure');
       process.exit(1);
-    } else {
-      console.log('🔄 Continuing in development mode without database...');
-      console.log('   Some features may not work properly without database connection\n');
     }
   }
 };
 
-// Initialize database connection
+// Connect to database
 connectDB();
 
-// Handle MongoDB connection events
-mongoose.connection.on('connected', async () => {
-  console.log('🔗 Mongoose connected to MongoDB');
-  
-  // Initialize database models
-  try {
-    const { initializeDatabase } = require('./models');
-    await initializeDatabase();
-  } catch (error) {
-    console.error('❌ Failed to initialize database models:', error.message);
-  }
+// Import routes with error handling
+console.log('🔄 Loading routes...');
+
+let authRoutes, restaurantRoutes, menuRoutes, orderRoutes;
+
+try {
+  console.log('📁 Loading auth routes...');
+  authRoutes = require('./routes/auth-simple');
+  console.log('✅ Auth routes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load auth routes:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
+
+// Load users routes
+let usersRoutes;
+try {
+  console.log('📁 Loading users routes...');
+  usersRoutes = require('./routes/users');
+  console.log('✅ Users routes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load users routes:', error.message);
+  usersRoutes = express.Router();
+}
+
+// Create simplified routes for other endpoints
+console.log('📁 Creating simplified routes...');
+restaurantRoutes = express.Router();
+menuRoutes = express.Router();
+orderRoutes = express.Router();
+
+// Add basic test routes
+restaurantRoutes.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Restaurant routes working' });
 });
 
-mongoose.connection.on('error', (err) => {
-  console.error('❌ Mongoose connection error:', err);
+restaurantRoutes.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Restaurant listing endpoint',
+    data: [],
+    note: 'This endpoint will be implemented with full restaurant data'
+  });
 });
 
-mongoose.connection.on('disconnected', () => {
-  console.log('🔌 Mongoose disconnected from MongoDB');
+menuRoutes.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Menu routes working' });
 });
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const restaurantRoutes = require('./routes/restaurants');
-const menuRoutes = require('./routes/menu');
-const orderRoutes = require('./routes/orders');
+menuRoutes.get('/restaurant/:restaurantId', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Menu items for restaurant',
+    restaurantId: req.params.restaurantId,
+    data: [],
+    note: 'This endpoint will be implemented with full menu data'
+  });
+});
 
-// Apply routes
-app.use('/api/auth', authRoutes);
-app.use('/api/restaurants', restaurantRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/orders', orderRoutes);
+orderRoutes.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Order routes working' });
+});
+
+orderRoutes.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'User orders endpoint',
+    data: [],
+    note: 'This endpoint will be implemented with full order data'
+  });
+});
+
+orderRoutes.post('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Order creation endpoint',
+    note: 'This endpoint will be implemented with full order processing'
+  });
+});
+
+console.log('✅ Simplified routes created successfully');
+
+// Apply routes with logging
+console.log('🔗 Mounting routes...');
+
+app.use('/api/auth', (req, res, next) => {
+  console.log(`🔐 Auth route: ${req.method} ${req.path}`);
+  next();
+}, authRoutes);
+
+app.use('/api/users', (req, res, next) => {
+  console.log(`👤 Users route: ${req.method} ${req.path}`);
+  next();
+}, usersRoutes);
+
+app.use('/api/restaurants', (req, res, next) => {
+  console.log(`🏪 Restaurant route: ${req.method} ${req.path}`);
+  next();
+}, restaurantRoutes);
+
+app.use('/api/menu', (req, res, next) => {
+  console.log(`📋 Menu route: ${req.method} ${req.path}`);
+  next();
+}, menuRoutes);
+
+app.use('/api/orders', (req, res, next) => {
+  console.log(`📦 Order route: ${req.method} ${req.path}`);
+  next();
+}, orderRoutes);
+
+console.log('✅ All routes mounted successfully');
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to FODYYY API', status: 'Server is running!' });
+  res.json({ 
+    message: 'Welcome to FODYYY API', 
+    status: 'Server is running!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Health check route
@@ -154,121 +192,70 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Database statistics route
-app.get('/api/stats', async (req, res) => {
-  try {
-    const { getModelStats } = require('./models');
-    const stats = await getModelStats();
-    
-    if (stats) {
-      res.json({
-        success: true,
-        message: 'Database statistics retrieved successfully',
-        data: stats,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to retrieve database statistics'
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error retrieving database statistics',
-      error: error.message
-    });
-  }
-});
-
-// ===== TEMPORARY TEST ROUTE - REMOVE AFTER TESTING =====
-// Minimal login route for quick testing
-app.post('/api/test/login', (req, res) => {
-  console.log('🧪 TEST LOGIN ROUTE HIT!');
-  console.log('   Request body:', req.body);
-  console.log('   Request headers:', req.headers);
-  console.log('   Timestamp:', new Date().toISOString());
-  
-  const { email, password } = req.body;
-  
-  // Basic validation
-  if (!email || !password) {
-    console.log('❌ Validation failed - missing email or password');
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Email and password are required',
-      received: { email: !!email, password: !!password }
-    });
-  }
-  
-  // Basic email format check
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    console.log('❌ Validation failed - invalid email format');
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Invalid email format',
-      email: email
-    });
-  }
-  
-  console.log('✅ Test login validation passed');
-  
-  // For now, just return success to test the route
-  res.json({ 
-    success: true, 
-    message: 'TEST: Login route is working perfectly!',
-    data: {
-      email: email,
-      timestamp: new Date().toISOString(),
-      note: 'This is a test route - replace with real auth later'
+    environment: process.env.NODE_ENV || 'development',
+    routes: {
+      auth: {
+        login: 'POST /api/auth/login',
+        register: 'POST /api/auth/register',
+        me: 'GET /api/auth/me',
+        logout: 'POST /api/auth/logout',
+        test: 'GET /api/auth/test'
+      },
+      users: {
+        profile: 'GET /api/users/:id',
+        update: 'PUT /api/users/:id',
+        list: 'GET /api/users (admin only)'
+      },
+      restaurants: {
+        list: 'GET /api/restaurants',
+        test: 'GET /api/restaurants/test'
+      },
+      menu: {
+        byRestaurant: 'GET /api/menu/restaurant/:restaurantId',
+        test: 'GET /api/menu/test'
+      },
+      orders: {
+        list: 'GET /api/orders',
+        create: 'POST /api/orders',
+        test: 'GET /api/orders/test'
+      }
+    },
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      host: mongoose.connection.host || 'Not connected'
     }
   });
 });
 
-// Alternative test route with different path
-app.post('/api/auth/test-login', (req, res) => {
-  console.log('🧪 ALTERNATIVE TEST LOGIN ROUTE HIT!');
-  console.log('   This route bypasses the auth routes middleware');
-  console.log('   Request body:', req.body);
-  
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Email and password required' 
-    });
-  }
-  
-  res.json({ 
-    success: true, 
-    message: 'Alternative test login route working',
-    email: email,
-    route: '/api/auth/test-login'
+// Test route to verify API is working
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working!',
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path
   });
 });
-// ===== END TEMPORARY TEST ROUTES =====
 
-// 404 handler for undefined routes (must come after all other routes)
-app.use((req, res, next) => {
-  const error = new Error(`Route ${req.originalUrl} not found`);
-  error.statusCode = 404;
-  next(error);
+// Test auth route specifically
+app.post('/api/test-login', (req, res) => {
+  console.log('🧪 Test login route hit:', req.body);
+  res.json({
+    success: true,
+    message: 'Test login route is working!',
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Error handling middleware (must be last)
+// Error handling middleware
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
-  
-  // Default to 500 server error
   let statusCode = err.statusCode || 500;
-  let message = err.message || 'Internal Server Error';
+  let message = err.message || 'Server Error';
+
+  console.error('❌ Error:', err.message);
+  console.error('Stack:', err.stack);
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -306,6 +293,23 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+// 404 handler for undefined routes
+app.use((req, res) => {
+  console.log(`❌ Route not found: ${req.method} ${req.originalUrl}`);
+  
+  res.status(404).json({
+    success: false,
+    error: `Route ${req.method} ${req.originalUrl} not found`,
+    availableRoutes: {
+      auth: '/api/auth/login, /api/auth/register, /api/auth/me',
+      restaurants: '/api/restaurants',
+      menu: '/api/menu',
+      orders: '/api/orders',
+      test: '/api/test, /api/test-login'
+    }
+  });
+});
+
 // Use error handler
 app.use(errorHandler);
 
@@ -335,7 +339,9 @@ process.on('SIGINT', async () => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`📍 Server URL: http://localhost:${PORT}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;

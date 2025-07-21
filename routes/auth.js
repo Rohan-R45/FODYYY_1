@@ -5,6 +5,28 @@ const { User, Restaurant } = require('../models');
 
 const router = express.Router();
 
+// Test route to verify auth routes are working
+router.get('/test', (req, res) => {
+  console.log('🧪 Auth test route hit!');
+  res.json({
+    success: true,
+    message: 'Auth routes are working!',
+    timestamp: new Date().toISOString(),
+    route: '/api/auth/test'
+  });
+});
+
+// Simple test login route
+router.post('/test-login', (req, res) => {
+  console.log('🧪 Auth test login route hit!', req.body);
+  res.json({
+    success: true,
+    message: 'Auth test login route is working!',
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Generate JWT Token
 const generateToken = (id, role) => {
   return jwt.sign(
