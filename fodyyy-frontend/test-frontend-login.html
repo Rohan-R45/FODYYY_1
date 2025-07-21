@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Frontend Login Test</h1>
+        <p>This page tests the login functionality from the frontend perspective.</p>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="demo@example.com" placeholder="Enter email">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="password123" placeholder="Enter password">
+        </div>
+        
+        <button onclick="testLogin()">🔐 Test Login</button>
+        <button onclick="testRegister()">📝 Test Register</button>
+        <button onclick="testConnection()">🌐 Test Connection</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        function log(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            
+            if (!resultDiv.innerHTML) {
+                resultDiv.className = `result ${type}`;
+            }
+            
+            resultDiv.innerHTML += logEntry;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            log('🌐 Testing server connection...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:5000/');
+                const data = await response.json();
+                log(`✅ Server connection successful!`, 'success');
+                log(`   Message: ${data.message}`, 'success');
+            } catch (error) {
+                log(`❌ Server connection failed!`, 'error');
+                log(`   Error: ${error.message}`, 'error');
+                log(`   Make sure backend server is running on port 5000`, 'error');
+            }
+        }
+        
+        async function testRegister() {
+            log('📝 Testing user registration...', 'info');
+            
+            const timestamp = Date.now();
+            const userData = {
+                name: 'Test User',
+                email: `testuser${timestamp}@example.com`,
+                password: 'password123',
+                role: 'student',
+                phone: `987654${timestamp.toString().slice(-4)}`,
+                address: 'Test Address, Test City'
+            };
+            
+            try {
+                log(`   Registering user: ${userData.email}`, 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log(`✅ Registration successful!`, 'success');
+                    log(`   User ID: ${data.data._id}`, 'success');
+                    log(`   Email: ${data.data.email}`, 'success');
+                    log(`   Token received: ${data.data.token ? 'Yes' : 'No'}`, 'success');
+                    
+                    // Update form with registered user
+                    document.getElementById('email').value = userData.email;
+                    document.getElementById('password').value = userData.password;
+                    
+                } else {
+                    log(`❌ Registration failed!`, 'error');
+                    log(`   Status: ${response.status}`, 'error');
+                    log(`   Message: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Registration error!`, 'error');
+                log(`   Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                log('❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            log(`🔐 Testing login for: ${email}`, 'info');
+            
+            const credentials = { email, password };
+            
+            try {
+                log('   Sending login request...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(credentials)
+                });
+                
+                log(`   Response status: ${response.status}`, 'info');
+                
+                const data = await response.json();
+                log(`   Response data: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+                if (response.ok && data.success) {
+                    log(`✅ Login successful!`, 'success');
+                    log(`   User ID: ${data.data._id}`, 'success');
+                    log(`   Name: ${data.data.name}`, 'success');
+                    log(`   Email: ${data.data.email}`, 'success');
+                    log(`   Role: ${data.data.role}`, 'success');
+                    log(`   Token received: ${data.data.token ? 'Yes' : 'No'}`, 'success');
+                    
+                    // Store token for further testing
+                    if (data.data.token) {
+                        localStorage.setItem('test_token', data.data.token);
+                        log(`   Token stored in localStorage`, 'success');
+                        
+                        // Test token validation
+                        await testTokenValidation(data.data.token);
+                    }
+                    
+                } else {
+                    log(`❌ Login failed!`, 'error');
+                    log(`   Status: ${response.status}`, 'error');
+                    log(`   Message: ${data.message}`, 'error');
+                    
+                    if (response.status === 401) {
+                        log(`   💡 This might be because:`, 'error');
+                        log(`      - User doesn't exist (try Register first)`, 'error');
+                        log(`      - Wrong password`, 'error');
+                        log(`      - Account is deactivated`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Login request failed!`, 'error');
+                log(`   Error: ${error.message}`, 'error');
+                
+                if (error.message.includes('fetch')) {
+                    log(`   💡 This is likely a network/CORS issue:`, 'error');
+                    log(`      - Backend server not running`, 'error');
+                    log(`      - CORS not configured for this origin`, 'error');
+                    log(`      - Wrong API URL`, 'error');
+                }
+            }
+        }
+        
+        async function testTokenValidation(token) {
+            log('🔍 Testing token validation...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/validate`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log(`✅ Token validation successful!`, 'success');
+                    log(`   User: ${data.data.email}`, 'success');
+                } else {
+                    log(`❌ Token validation failed!`, 'error');
+                    log(`   Status: ${response.status}`, 'error');
+                    log(`   Message: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Token validation error!`, 'error');
+                log(`   Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test connection on page load
+        window.onload = function() {
+            log('🚀 Frontend Login Test Page Loaded', 'info');
+            log(`   API Base URL: ${API_BASE_URL}`, 'info');
+            log(`   Current Origin: ${window.location.origin}`, 'info');
+            testConnection();
+        };
+    </script>
+</body>
+</html>

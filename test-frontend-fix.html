@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend Login Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test Frontend Login Fix</h1>
+        <p>This page tests the login with the exact same logic as your React frontend.</p>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="demo@student.com" placeholder="Enter email">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="password123" placeholder="Enter password">
+        </div>
+        
+        <button onclick="testLogin()" id="loginBtn">🔐 Test Login</button>
+        <button onclick="testRegister()" id="registerBtn">📝 Test Register</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let isLoading = false;
+        
+        function log(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            
+            if (!resultDiv.innerHTML) {
+                resultDiv.className = `result ${type}`;
+            }
+            
+            resultDiv.innerHTML += logEntry;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
+        
+        function setLoading(loading) {
+            isLoading = loading;
+            document.getElementById('loginBtn').disabled = loading;
+            document.getElementById('registerBtn').disabled = loading;
+            
+            if (loading) {
+                log('⏳ Loading...', 'loading');
+            }
+        }
+        
+        // Simulate the exact authService.login function
+        async function authServiceLogin(credentials) {
+            try {
+                console.log('🔐 Attempting login with:', credentials.email);
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(credentials),
+                    timeout: 30000
+                });
+                
+                const data = await response.json();
+                console.log('✅ Login response:', data);
+                
+                // Backend returns { success: true, data: { user + token } }
+                if (data.success && data.data) {
+                    // Store token and user data (simulating localStorage)
+                    const token = data.data.token;
+                    const userData = {
+                        _id: data.data._id,
+                        name: data.data.name,
+                        email: data.data.email,
+                        role: data.data.role,
+                        phone: data.data.phone,
+                        address: data.data.address,
+                        isActive: data.data.isActive,
+                        createdAt: data.data.createdAt,
+                        updatedAt: data.data.updatedAt
+                    };
+                    
+                    console.log('💾 Storing token:', token ? 'Yes' : 'No');
+                    console.log('💾 Storing user:', userData);
+                    
+                    return {
+                        success: true,
+                        data: data.data
+                    };
+                } else {
+                    return {
+                        success: false,
+                        message: data.message || 'Login failed'
+                    };
+                }
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                
+                // Handle different types of errors
+                if (error.name === 'AbortError') {
+                    return {
+                        success: false,
+                        message: 'Login request timed out. Please check your connection and try again.'
+                    };
+                } else if (error.message.includes('fetch')) {
+                    return {
+                        success: false,
+                        message: 'Unable to connect to server. Please try again later.'
+                    };
+                } else {
+                    return {
+                        success: false,
+                        message: error.message || 'Network connection error. Please try again.'
+                    };
+                }
+            }
+        }
+        
+        // Simulate the exact AuthContext.login function
+        async function contextLogin(credentials) {
+            setLoading(true);
+            try {
+                const response = await authServiceLogin(credentials);
+                
+                if (response.success) {
+                    // Backend returns user data with token in the same object
+                    const userData = response.data;
+                    const newToken = userData.token;
+                    
+                    // Create user object without token for storage
+                    const userForStorage = {
+                        _id: userData._id,
+                        name: userData.name,
+                        email: userData.email,
+                        role: userData.role,
+                        phone: userData.phone,
+                        address: userData.address,
+                        isActive: userData.isActive,
+                        createdAt: userData.createdAt,
+                        updatedAt: userData.updatedAt
+                    };
+                    
+                    // Simulate localStorage storage
+                    console.log('💾 Would store token:', newToken);
+                    console.log('💾 Would store user:', userForStorage);
+                    
+                    log(`✅ Login successful!`, 'success');
+                    log(`👤 Welcome back, ${userData.name}!`, 'success');
+                    log(`📧 Email: ${userData.email}`, 'success');
+                    log(`👤 Role: ${userData.role}`, 'success');
+                    log(`🎫 Token: ${newToken ? 'Received' : 'Missing'}`, 'success');
+                    log(`📱 Phone: ${userData.phone}`, 'success');
+                    log(`🏠 Address: ${userData.address}`, 'success');
+                    
+                    return { success: true, data: userForStorage };
+                } else {
+                    log(`❌ Login failed: ${response.message}`, 'error');
+                    return { success: false, message: response.message };
+                }
+            } catch (error) {
+                const errorMessage = 'Login failed. Please try again.';
+                log(`❌ ${errorMessage}`, 'error');
+                log(`   Error details: ${error.message}`, 'error');
+                return { success: false, message: errorMessage };
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                log('❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            log(`🔐 Testing login for: ${email}`, 'info');
+            
+            const credentials = { email, password };
+            const result = await contextLogin(credentials);
+            
+            if (result.success) {
+                log(`🎉 Login test completed successfully!`, 'success');
+            } else {
+                log(`💥 Login test failed: ${result.message}`, 'error');
+            }
+        }
+        
+        async function testRegister() {
+            log('📝 Register test not implemented in this demo', 'info');
+        }
+        
+        // Test on page load
+        window.onload = function() {
+            log('🚀 Frontend Login Fix Test Page Loaded', 'info');
+            log(`   API Base URL: ${API_BASE_URL}`, 'info');
+            log(`   Ready to test login fix!`, 'info');
+        };
+    </script>
+</body>
+</html>

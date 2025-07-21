@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Frontend-Backend Connection Test</h1>
+    
+    <button onclick="testConnection()">Test API Connection</button>
+    <button onclick="testRestaurants()">Test Restaurant List</button>
+    <button onclick="testRestaurantDetail()">Test Restaurant Detail</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            addResult('🔄 Testing basic API connection...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ API connection successful!', 'success');
+                    addResult(`Response: ${JSON.stringify(data)}`, 'info');
+                } else {
+                    addResult(`❌ API connection failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRestaurants() {
+            addResult('🔄 Testing restaurant list endpoint...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addResult('✅ Restaurant list fetch successful!', 'success');
+                    addResult(`Found ${data.data.length} restaurants`, 'success');
+                    
+                    // Show first restaurant
+                    if (data.data.length > 0) {
+                        const firstRestaurant = data.data[0];
+                        addResult(`First restaurant: ${firstRestaurant.name} (Rating: ${firstRestaurant.rating || 'N/A'})`, 'info');
+                        
+                        // Store for detail test
+                        window.testRestaurantId = firstRestaurant._id;
+                    }
+                    
+                    addResult('<pre>' + JSON.stringify(data, null, 2) + '</pre>', 'info');
+                } else {
+                    addResult(`❌ Restaurant list failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRestaurantDetail() {
+            if (!window.testRestaurantId) {
+                addResult('❌ No restaurant ID available. Run restaurant list test first.', 'error');
+                return;
+            }
+            
+            addResult(`🔄 Testing restaurant detail for ID: ${window.testRestaurantId}...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants/${window.testRestaurantId}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addResult('✅ Restaurant detail fetch successful!', 'success');
+                    addResult(`Restaurant: ${data.data.restaurant.name}`, 'success');
+                    
+                    // Check menu items
+                    const menuItems = data.data.menuItems;
+                    if (menuItems) {
+                        const totalItems = Object.values(menuItems).reduce((sum, items) => sum + items.length, 0);
+                        addResult(`Menu items: ${totalItems} total`, 'success');
+                        
+                        Object.keys(menuItems).forEach(category => {
+                            addResult(`  ${category}: ${menuItems[category].length} items`, 'info');
+                        });
+                    }
+                    
+                    addResult('<pre>' + JSON.stringify(data, null, 2) + '</pre>', 'info');
+                } else {
+                    addResult(`❌ Restaurant detail failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run basic test on load
+        window.onload = function() {
+            addResult('🚀 Frontend-Backend Connection Tester Ready', 'info');
+            addResult('Click buttons above to test different endpoints', 'info');
+        };
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Frontend-Backend Connection Test</h1>
+    
+    <button onclick="testConnection()">Test API Connection</button>
+    <button onclick="testRestaurants()">Test Restaurant List</button>
+    <button onclick="testRestaurantDetail()">Test Restaurant Detail</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            addResult('🔄 Testing basic API connection...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ API connection successful!', 'success');
+                    addResult(`Response: ${JSON.stringify(data)}`, 'info');
+                } else {
+                    addResult(`❌ API connection failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRestaurants() {
+            addResult('🔄 Testing restaurant list endpoint...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addResult('✅ Restaurant list fetch successful!', 'success');
+                    addResult(`Found ${data.data.length} restaurants`, 'success');
+                    
+                    // Show first restaurant
+                    if (data.data.length > 0) {
+                        const firstRestaurant = data.data[0];
+                        addResult(`First restaurant: ${firstRestaurant.name} (Rating: ${firstRestaurant.rating || 'N/A'})`, 'info');
+                        
+                        // Store for detail test
+                        window.testRestaurantId = firstRestaurant._id;
+                    }
+                    
+                    addResult('<pre>' + JSON.stringify(data, null, 2) + '</pre>', 'info');
+                } else {
+                    addResult(`❌ Restaurant list failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRestaurantDetail() {
+            if (!window.testRestaurantId) {
+                addResult('❌ No restaurant ID available. Run restaurant list test first.', 'error');
+                return;
+            }
+            
+            addResult(`🔄 Testing restaurant detail for ID: ${window.testRestaurantId}...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/restaurants/${window.testRestaurantId}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addResult('✅ Restaurant detail fetch successful!', 'success');
+                    addResult(`Restaurant: ${data.data.restaurant.name}`, 'success');
+                    
+                    // Check menu items
+                    const menuItems = data.data.menuItems;
+                    if (menuItems) {
+                        const totalItems = Object.values(menuItems).reduce((sum, items) => sum + items.length, 0);
+                        addResult(`Menu items: ${totalItems} total`, 'success');
+                        
+                        Object.keys(menuItems).forEach(category => {
+                            addResult(`  ${category}: ${menuItems[category].length} items`, 'info');
+                        });
+                    }
+                    
+                    addResult('<pre>' + JSON.stringify(data, null, 2) + '</pre>', 'info');
+                } else {
+                    addResult(`❌ Restaurant detail failed: ${data.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run basic test on load
+        window.onload = function() {
+            addResult('🚀 Frontend-Backend Connection Tester Ready', 'info');
+            addResult('Click buttons above to test different endpoints', 'info');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .cod-btn {
+            background-color: #28a745;
+        }
+        .cod-btn:hover {
+            background-color: #1e7e34;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Order Connection Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Server Connection</h3>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connection-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Login</h3>
+        <button onclick="testLogin()">Test Student Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Order Creation</h3>
+        <button onclick="testCODOrder()" class="cod-btn">Test COD Order</button>
+        <button onclick="testUPIOrder()">Test UPI Order</button>
+        <div id="order-result"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/test', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '<div class="success">✅ Server connection successful!</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Server connection failed: ' + response.status + '</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">❌ Connection error: ' + error.message + '</div>';
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'student@iittp.ac.in',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data.token) {
+                    authToken = data.data.token;
+                    resultDiv.innerHTML = '<div class="success">✅ Login successful! Token obtained.</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Login failed: ' + (data.message || 'Unknown error') + '</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">❌ Login error: ' + error.message + '</div>';
+            }
+        }
+
+        async function testCODOrder() {
+            await testOrder('cod');
+        }
+
+        async function testUPIOrder() {
+            await testOrder('upi');
+        }
+
+        async function testOrder(paymentMethod) {
+            const resultDiv = document.getElementById('order-result');
+            
+            if (!authToken) {
+                resultDiv.innerHTML = '<div class="error">❌ Please login first to get auth token</div>';
+                return;
+            }
+
+            try {
+                const orderData = {
+                    restaurantId: '68592e1b67f9c145483d6554',
+                    items: [{
+                        menuItemId: '685aeb03ee9cec0e61e0e598',
+                        quantity: 2,
+                        specialInstructions: 'Extra spicy please'
+                    }],
+                    deliveryAddress: 'Room 101, Hostel Block A, Near Main Gate, Sangareddy, 502285',
+                    phoneNumber: '9876543210',
+                    paymentMethod: paymentMethod,
+                    specialInstructions: 'Please call before delivery'
+                };
+
+                console.log('Sending order data:', orderData);
+
+                const response = await fetch('http://localhost:5000/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                const data = await response.json();
+                console.log('Order response:', data);
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${paymentMethod.toUpperCase()} Order successful!<br>
+                            Order ID: ${data.data._id}<br>
+                            Payment Method: ${data.data.paymentMethod}<br>
+                            Status: ${data.data.status}<br>
+                            Total: ₹${data.data.totalAmount}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ ${paymentMethod.toUpperCase()} Order failed: ${data.message}
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ ${paymentMethod.toUpperCase()} Order error: ${error.message}
+                    </div>
+                `;
+                console.error('Order error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

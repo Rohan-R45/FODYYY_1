@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend Error Handling</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test Frontend Error Handling</h1>
+        <p>This page tests the login error handling with the exact same logic as your React frontend.</p>
+        
+        <div class="test-case">
+            <h3>🧪 Test Case 1: Wrong Email (Unregistered Account)</h3>
+            <div class="form-group">
+                <label for="email1">Email:</label>
+                <input type="email" id="email1" value="nonexistent@user.com" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label for="password1">Password:</label>
+                <input type="password" id="password1" value="password123" placeholder="Enter password">
+            </div>
+            <button onclick="testLogin(1)">🔐 Test Login</button>
+            <div id="result1"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>🧪 Test Case 2: Wrong Password (Registered Account)</h3>
+            <div class="form-group">
+                <label for="email2">Email:</label>
+                <input type="email" id="email2" value="demo@student.com" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label for="password2">Password:</label>
+                <input type="password" id="password2" value="wrongpassword" placeholder="Enter password">
+            </div>
+            <button onclick="testLogin(2)">🔐 Test Login</button>
+            <div id="result2"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>🧪 Test Case 3: Empty Fields</h3>
+            <div class="form-group">
+                <label for="email3">Email:</label>
+                <input type="email" id="email3" value="" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label for="password3">Password:</label>
+                <input type="password" id="password3" value="" placeholder="Enter password">
+            </div>
+            <button onclick="testLogin(3)">🔐 Test Login</button>
+            <div id="result3"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>🧪 Test Case 4: Valid Credentials</h3>
+            <div class="form-group">
+                <label for="email4">Email:</label>
+                <input type="email" id="email4" value="demo@student.com" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label for="password4">Password:</label>
+                <input type="password" id="password4" value="password123" placeholder="Enter password">
+            </div>
+            <button onclick="testLogin(4)">🔐 Test Login</button>
+            <div id="result4"></div>
+        </div>
+
+        <button onclick="clearAllResults()">🧹 Clear All Results</button>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        function log(testCase, message, type = 'info') {
+            const resultDiv = document.getElementById(`result${testCase}`);
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            
+            if (!resultDiv.innerHTML) {
+                resultDiv.className = `result ${type}`;
+            }
+            
+            resultDiv.innerHTML += logEntry;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+        
+        function clearAllResults() {
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`result${i}`).innerHTML = '';
+            }
+        }
+        
+        // Simulate the FIXED authService.login function
+        async function authServiceLogin(credentials) {
+            try {
+                console.log('🔐 Attempting login with:', credentials.email);
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(credentials),
+                    timeout: 30000
+                });
+                
+                const data = await response.json();
+                console.log('✅ Login response:', data);
+                
+                // Backend returns { success: true, data: { user + token } }
+                if (data.success && data.data) {
+                    return {
+                        success: true,
+                        data: data.data
+                    };
+                } else {
+                    return {
+                        success: false,
+                        message: data.message || 'Login failed'
+                    };
+                }
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                
+                // Handle different types of errors
+                if (error.name === 'AbortError') {
+                    return {
+                        success: false,
+                        message: 'Login request timed out. Please check your connection and try again.'
+                    };
+                } else if (error.message.includes('fetch')) {
+                    return {
+                        success: false,
+                        message: 'Unable to connect to server. Please try again later.'
+                    };
+                } else {
+                    return {
+                        success: false,
+                        message: error.message || 'Network connection error. Please try again.'
+                    };
+                }
+            }
+        }
+        
+        // Simulate the FIXED AuthContext.login function
+        async function contextLogin(credentials, testCase) {
+            log(testCase, '⏳ Starting login...', 'loading');
+            
+            try {
+                const response = await authServiceLogin(credentials);
+                
+                if (response.success) {
+                    const userData = response.data;
+                    const newToken = userData.token;
+                    
+                    log(testCase, `✅ Login successful!`, 'success');
+                    log(testCase, `👤 Welcome back, ${userData.name}!`, 'success');
+                    log(testCase, `📧 Email: ${userData.email}`, 'success');
+                    log(testCase, `👤 Role: ${userData.role}`, 'success');
+                    log(testCase, `🎫 Token: ${newToken ? 'Received' : 'Missing'}`, 'success');
+                    
+                    return { success: true, data: userData };
+                } else {
+                    log(testCase, `❌ Login failed: ${response.message}`, 'error');
+                    return { success: false, message: response.message };
+                }
+            } catch (error) {
+                const errorMessage = 'Login failed. Please try again.';
+                log(testCase, `❌ ${errorMessage}`, 'error');
+                log(testCase, `   Error details: ${error.message}`, 'error');
+                return { success: false, message: errorMessage };
+            }
+        }
+        
+        async function testLogin(testCase) {
+            const email = document.getElementById(`email${testCase}`).value;
+            const password = document.getElementById(`password${testCase}`).value;
+            
+            log(testCase, `🔐 Testing login for: "${email}" with password: "${password}"`, 'info');
+            
+            const credentials = { email, password };
+            const result = await contextLogin(credentials, testCase);
+            
+            if (result.success) {
+                log(testCase, `🎉 Test completed successfully!`, 'success');
+            } else {
+                log(testCase, `💥 Test completed with error: ${result.message}`, 'error');
+            }
+        }
+        
+        // Test on page load
+        window.onload = function() {
+            console.log('🚀 Frontend Error Handling Test Page Loaded');
+            console.log(`   API Base URL: ${API_BASE_URL}`);
+            console.log(`   Ready to test error handling!`);
+        };
+    </script>
+</body>
+</html>
