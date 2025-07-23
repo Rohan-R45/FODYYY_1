@@ -1,5 +1,6 @@
 // Input validation middleware
 const validator = require('validator');
+const { body, validationResult } = require('express-validator');
 
 // Email validation
 const validateEmail = (email) => {
@@ -295,6 +296,57 @@ const createValidator = (rules) => {
   };
 };
 
+// Express-validator based validation helper
+const createExpressValidator = (validationRules) => {
+  return [
+    ...validationRules,
+    (req, res, next) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array().map(error => ({
+            field: error.path || error.param,
+            message: error.msg,
+            value: error.value
+          }))
+        });
+      }
+      next();
+    }
+  ];
+};
+
+// Common express-validator rules
+const commonValidationRules = {
+  email: body('email')
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+  
+  password: body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .matches(/(?=.*[a-zA-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one letter and one number'),
+  
+  name: body('name')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Name must be between 2 and 50 characters')
+    .matches(/^[a-zA-Z\s\-']+$/)
+    .withMessage('Name can only contain letters, spaces, hyphens, and apostrophes'),
+  
+  phone: body('phone')
+    .isMobilePhone('any')
+    .withMessage('Please provide a valid phone number'),
+  
+  role: body('role')
+    .isIn(['student', 'restaurant'])
+    .withMessage('Role must be either student or restaurant')
+};
+
 // Sanitization middleware
 const sanitizeInput = (req, res, next) => {
   const sanitizeObject = (obj) => {
@@ -327,5 +379,7 @@ module.exports = {
   validateProfileUpdate,
   validatePasswordChange,
   createValidator,
+  createExpressValidator,
+  commonValidationRules,
   sanitizeInput
 };

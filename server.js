@@ -72,7 +72,7 @@ let authRoutes, restaurantRoutes, menuRoutes, orderRoutes;
 
 try {
   console.log('📁 Loading auth routes...');
-  authRoutes = require('./routes/auth-simple');
+  authRoutes = require('./routes/auth');
   console.log('✅ Auth routes loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load auth routes:', error.message);
@@ -88,65 +88,44 @@ try {
   console.log('✅ Users routes loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load users routes:', error.message);
-  usersRoutes = express.Router();
+  console.error('Stack:', error.stack);
+  process.exit(1);
 }
 
-// Create simplified routes for other endpoints
-console.log('📁 Creating simplified routes...');
-restaurantRoutes = express.Router();
-menuRoutes = express.Router();
-orderRoutes = express.Router();
+// Load restaurant routes
+try {
+  console.log('📁 Loading restaurant routes...');
+  restaurantRoutes = require('./routes/restaurants');
+  console.log('✅ Restaurant routes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load restaurant routes:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
-// Add basic test routes
-restaurantRoutes.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Restaurant routes working' });
-});
+// Load menu routes
+try {
+  console.log('📁 Loading menu routes...');
+  menuRoutes = require('./routes/menu');
+  console.log('✅ Menu routes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load menu routes:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
-restaurantRoutes.get('/', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Restaurant listing endpoint',
-    data: [],
-    note: 'This endpoint will be implemented with full restaurant data'
-  });
-});
+// Load order routes
+try {
+  console.log('📁 Loading order routes...');
+  orderRoutes = require('./routes/orders');
+  console.log('✅ Order routes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load order routes:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
-menuRoutes.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Menu routes working' });
-});
-
-menuRoutes.get('/restaurant/:restaurantId', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Menu items for restaurant',
-    restaurantId: req.params.restaurantId,
-    data: [],
-    note: 'This endpoint will be implemented with full menu data'
-  });
-});
-
-orderRoutes.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Order routes working' });
-});
-
-orderRoutes.get('/', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'User orders endpoint',
-    data: [],
-    note: 'This endpoint will be implemented with full order data'
-  });
-});
-
-orderRoutes.post('/', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Order creation endpoint',
-    note: 'This endpoint will be implemented with full order processing'
-  });
-});
-
-console.log('✅ Simplified routes created successfully');
+console.log('✅ All route files loaded successfully');
 
 // Apply routes with logging
 console.log('🔗 Mounting routes...');
@@ -337,11 +316,15 @@ process.on('SIGINT', async () => {
 });
 
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log(`📍 Server URL: http://localhost:${PORT}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on ${HOST}:${PORT}`);
+  console.log(`📍 Server URL: http://${HOST}:${PORT}`);
+  console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔑 JWT Secret configured: ${process.env.JWT_SECRET ? 'Yes' : 'No'}`);
+  console.log(`🗄️  MongoDB URI configured: ${process.env.MONGODB_URI ? 'Yes' : 'No'}`);
 });
 
 module.exports = app;
