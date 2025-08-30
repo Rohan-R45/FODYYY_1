@@ -366,7 +366,7 @@ const RestaurantDashboard = () => {
 
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
-                          {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''} • 
+                          {(order.itemsCount ?? order.items?.length ?? 0)} item{((order.itemsCount ?? order.items?.length ?? 0) !== 1) ? 's' : ''} • 
                           {order.paymentMethod === 'upi' ? ' UPI' : ' Cash on Delivery'}
                         </div>
                         

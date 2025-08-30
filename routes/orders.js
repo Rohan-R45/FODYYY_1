@@ -243,11 +243,28 @@ const calculateOrderTotal = (items) => {
 
 // Helper function to format order response
 const formatOrderResponse = (order, userRole = null) => {
+  const subtotal = calculateOrderTotal(order.items);
+  const deliveryFee = order.deliveryFee || 0;
+  const tax = order.tax || 0;
+  const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : (order.discount || 0);
+  const total = Math.max(0, subtotal + deliveryFee + tax - discount);
+
   const formattedOrder = {
     _id: order._id,
     orderNumber: order.orderNumber,
     status: order.status,
+    // Sum of items (at order time). Some clients treat this as items subtotal.
     totalAmount: order.totalAmount,
+    // Provide explicit monetary breakdown so clients don't guess
+    subtotal,
+    deliveryFee,
+    tax,
+    // Keep both number and detail object compatibility
+    discount,
+    discountDetails: order.discount || { amount: 0 },
+    // Explicit payable total for UI clients
+    total,
+
     deliveryAddress: order.deliveryAddress,
     phoneNumber: order.phoneNumber,
     paymentMethod: order.paymentMethod,
@@ -258,6 +275,8 @@ const formatOrderResponse = (order, userRole = null) => {
     updatedAt: order.updatedAt,
     items: order.items.map(item => ({
       _id: item._id,
+      // Include stable name at top-level
+      name: item.name,
       menuItem: {
         _id: item.menuItemId._id,
         name: item.menuItemId.name,
@@ -266,7 +285,7 @@ const formatOrderResponse = (order, userRole = null) => {
         image: item.menuItemId.image
       },
       quantity: item.quantity,
-      price: item.price,
+      price: item.price, // price locked at order time
       specialInstructions: item.specialInstructions,
       subtotal: item.price * item.quantity
     })),

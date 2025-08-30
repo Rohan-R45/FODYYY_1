@@ -26,6 +26,46 @@ const RestaurantList = () => {
     hasPrevPage: false
   });
 
+  // Modal state for filter popup
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tempFilters, setTempFilters] = useState({ ...filters });
+  const [tempSortBy, setTempSortBy] = useState(sortBy);
+  const [tempSortOrder, setTempSortOrder] = useState(sortOrder);
+
+  const openFilter = () => {
+    setTempFilters({ ...filters });
+    setTempSortBy(sortBy);
+    setTempSortOrder(sortOrder);
+    setIsFilterOpen(true);
+  };
+
+  const closeFilter = () => setIsFilterOpen(false);
+
+  const applyFilters = () => {
+    setFilters({ ...tempFilters });
+    setSortBy(tempSortBy);
+    setSortOrder(tempSortOrder);
+    updateSearchParams({
+      ...tempFilters,
+      sortBy: tempSortBy,
+      sortOrder: tempSortOrder
+    });
+    setIsFilterOpen(false);
+  };
+
+  const resetFilters = () => {
+    const defaults = { cuisine: '', rating: '', deliveryTime: '', priceRange: '' };
+    setTempFilters(defaults);
+    setTempSortBy('rating');
+    setTempSortOrder('desc');
+    setFilters(defaults);
+    setSortBy('rating');
+    setSortOrder('desc');
+    setSearchQuery('');
+    setSearchParams({});
+    setIsFilterOpen(false);
+  };
+
   const cuisineTypes = [
     'North Indian', 'South Indian', 'Chinese', 'Italian', 'Continental',
     'Fast Food', 'Street Food', 'Desserts', 'Beverages', 'Healthy'
@@ -152,26 +192,51 @@ const RestaurantList = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Restaurants</h1>
-              <p className="text-gray-600 mt-1">
-                {pagination.totalItems > 0 
-                  ? `${pagination.totalItems} restaurant${pagination.totalItems !== 1 ? 's' : ''} available`
-                  : `${restaurants.length} restaurant${restaurants.length !== 1 ? 's' : ''} available`
-                }
-              </p>
+            <div className="flex items-start justify-between gap-3 w-full md:w-auto">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Restaurants</h1>
+                <p className="text-gray-600 mt-1">
+                  {pagination.totalItems > 0 
+                    ? `${pagination.totalItems} restaurant${pagination.totalItems !== 1 ? 's' : ''} available`
+                    : `${restaurants.length} restaurant${restaurants.length !== 1 ? 's' : ''} available`
+                  }
+                </p>
+              </div>
+              {/* Floating/round filter button */}
+              <button
+                type="button"
+                onClick={openFilter}
+                aria-label="Open filters"
+                className="shrink-0 md:hidden inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#FF6B35] text-white shadow-[0_6px_18px_rgba(255,107,53,0.35)] active:scale-[0.98]"
+              >
+                {/* Filter icon */}
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M6 12h12M10 19h4" />
+                </svg>
+              </button>
             </div>
             
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md">
+            <form onSubmit={handleSearch} className="flex-1 max-w-md relative">
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search restaurants, cuisines..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-10"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-12"
                 />
+                {/* Desktop filter round button near search */}
+                <button
+                  type="button"
+                  onClick={openFilter}
+                  aria-label="Open filters"
+                  className="hidden md:inline-flex absolute right-10 top-1/2 -translate-y-1/2 items-center justify-center w-9 h-9 rounded-full bg-[#FF6B35] text-white shadow"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M6 12h12M10 19h4" />
+                  </svg>
+                </button>
                 <button
                   type="submit"
                   className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
@@ -186,10 +251,144 @@ const RestaurantList = () => {
         </div>
       </div>
 
+      {/* Filters Modal */}
+      {isFilterOpen && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <button
+            onClick={closeFilter}
+            aria-label="Close filters"
+            className="absolute inset-0 bg-black/40"
+          />
+          {/* Modal content */}
+          <div className="relative w-[92vw] max-w-md bg-white rounded-2xl shadow-xl border border-orange-100 p-4 animate-fade-in-up">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-900">Filter Results</h3>
+              <button onClick={closeFilter} aria-label="Close" className="p-2 rounded-full hover:bg-gray-100">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+              {/* Sort By */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                <select
+                  value={tempSortBy}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const opt = sortOptions.find(o => o.value === value);
+                    setTempSortBy(value);
+                    setTempSortOrder(opt?.order || 'desc');
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cuisine */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+                <select
+                  value={tempFilters.cuisine}
+                  onChange={(e) => setTempFilters({ ...tempFilters, cuisine: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">All Cuisines</option>
+                  {cuisineTypes.map((cuisine) => (
+                    <option key={cuisine} value={cuisine}>
+                      {cuisine}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Rating</label>
+                <select
+                  value={tempFilters.rating}
+                  onChange={(e) => setTempFilters({ ...tempFilters, rating: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Any Rating</option>
+                  {ratingOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Delivery Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time</label>
+                <select
+                  value={tempFilters.deliveryTime}
+                  onChange={(e) => setTempFilters({ ...tempFilters, deliveryTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Any Time</option>
+                  {deliveryTimeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
+                <select
+                  value={tempFilters.priceRange}
+                  onChange={(e) => setTempFilters({ ...tempFilters, priceRange: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Any Price</option>
+                  {priceRangeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+              >
+                Reset
+              </button>
+              <button
+                onClick={applyFilters}
+                className="px-4 py-2 rounded-lg bg-[#FF6B35] text-white font-semibold shadow-[0_6px_18px_rgba(255,107,53,0.35)] active:scale-[0.99]"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <div className="lg:w-64 flex-shrink-0">
+          {/* Filters Modal Triggered via buttons above; remove static sidebar on mobile */}
+          <div className="lg:w-64 flex-shrink-0 hidden lg:block">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-4">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">Filters</h2>

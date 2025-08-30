@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import restaurantService from '../services/restaurantService';
 import orderService from '../services/orderService';
 import { formatCurrency, formatDateTime, getRelativeTime, safeNumber } from '../utils/helpers';
+import { computeSubtotal, computeTotal, getItemPrice, getItemQty } from '../utils/orderTotals';
 import { createSafeLinkProps } from '../utils/navigation';
 import { isValidId } from '../utils/validation';
 import toast from 'react-hot-toast';
@@ -357,7 +358,7 @@ const StudentDashboard = () => {
                         </div>
                         <div className="text-right ml-4">
                           <p className="font-semibold text-gray-900">
-                            {formatCurrency(order.totalAmount)}
+                            {formatCurrency(computeTotal(order))}
                           </p>
                           {isValidId(order._id) ? (
                             <Link

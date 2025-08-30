@@ -163,29 +163,41 @@ const MyOrders = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                My Orders 📋
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Track and manage your food orders
-              </p>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">My Orders</h1>
+            <p className="text-gray-600 text-sm">{filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} found</p>
+          </div>
+          <Link to="/restaurants" className="px-3 h-9 rounded-lg bg-orange-500 text-white text-sm font-medium flex items-center hover:bg-orange-700">Order Again</Link>
+        </div>
+        <div className="max-w-3xl mx-auto px-4 pb-3 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2">
+            {[
+              { key: 'all', label: 'All Orders', count: stats.total },
+              { key: 'active', label: 'Active', count: stats.active },
+              { key: 'completed', label: 'Completed', count: stats.completed },
+              { key: 'cancelled', label: 'Cancelled', count: stats.cancelled }
+            ].map((tab) => (
+              <button key={tab.key} onClick={() => setFilter(tab.key)} className={`px-3 h-9 rounded-full text-sm whitespace-nowrap ${filter === tab.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                {tab.label}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === tab.key ? 'bg-white/20' : 'bg-gray-200'}`}>{tab.count}</span>
+              </button>
+            ))}
+            <div className="ml-auto">
+              <select className="h-9 text-sm rounded-full bg-gray-100 px-3 text-gray-700" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="amount_high">Amount: High to Low</option>
+                <option value="amount_low">Amount: Low to High</option>
+              </select>
             </div>
-            <Link
-              to="/student"
-              className="btn btn-ghost"
-            >
-              ← Back to Dashboard
-            </Link>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="card p-4 text-center">

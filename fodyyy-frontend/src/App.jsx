@@ -291,7 +291,7 @@ function App() {
           {/* Conditional Footer - Only on Home Page */}
           <ConditionalFooter />
           
-          {/* Bottom Navigation - Mobile Only */}
+          {/* Bottom Navigation - Mobile Only. Render once at app root */}
           <BottomNavigation />
             </div>
             </Router>

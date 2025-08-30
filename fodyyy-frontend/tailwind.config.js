@@ -24,6 +24,9 @@ export default {
       fontFamily: {
         'poppins': ['Poppins', 'sans-serif'],
         'inter': ['Inter', 'sans-serif'],
+        'display': ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        'body': ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
+        'sans': ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         'xs': '0.75rem',

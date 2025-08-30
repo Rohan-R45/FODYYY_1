@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import orderService from '../services/orderService';
 import { formatCurrency, formatDateTime, getRelativeTime } from '../utils/helpers';
+import { computeSubtotal, computeTotal, getItemPrice, getItemQty } from '../utils/orderTotals';
 import { validateOrderId, isValidId } from '../utils/validation';
 import { useSafeNavigation } from '../utils/navigation';
 import { OrderRouteGuard } from '../components/RouteGuard';
@@ -227,66 +228,36 @@ const OrderDetailsContent = () => {
     );
   }
 
+  // Compute robust totals using shared utils
+  const computedSubtotal = typeof order?.subtotal === 'number' ? order.subtotal : computeSubtotal(order?.items);
+  const deliveryFeeNum = Number(order?.deliveryFee || 0);
+  const taxNum = Number(order?.tax || 0);
+  const discountNum = typeof order?.discount === 'number' ? order.discount : Number(order?.discountDetails?.amount || order?.discount?.amount || 0);
+  const computedTotal = Math.max(0, computedSubtotal + deliveryFeeNum + taxNum - discountNum);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={handleBackNavigation}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Order Details</h1>
-                <p className="text-gray-600">Order #{order._id?.slice(-8) || 'Unknown'}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status)}`}>
-                {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
-              </span>
-              
-              {isRestaurantOwner() && canUpdateStatus(order.status) && (
-                <button
-                  onClick={() => handleStatusUpdate(getNextStatus(order.status))}
-                  disabled={isUpdating}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isUpdating ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      Update to {getNextStatus(order.status)?.charAt(0).toUpperCase() + getNextStatus(order.status)?.slice(1)}
-                    </>
-                  )}
-                </button>
-              )}
-              
-              {canCancelOrder(order.status) && (
-                <button
-                  onClick={handleCancelOrder}
-                  disabled={isUpdating}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel Order
-                </button>
-              )}
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <button onClick={handleBackNavigation} className="mr-3 p-2 hover:bg-gray-100 rounded-full">
+              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Order Details</h1>
+              <p className="text-gray-600 text-sm">Order #{order._id?.slice(-8) || 'Unknown'}</p>
             </div>
           </div>
+          <span className={`inline-flex items-center px-2.5 h-8 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
+          </span>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Order Information */}
           <div className="lg:col-span-2 space-y-6">
@@ -386,10 +357,10 @@ const OrderDetailsContent = () => {
                   <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0">
-                        {item.image ? (
+                        {(item?.menuItem?.image || item?.menuItemId?.image) ? (
                           <img
-                            src={item.image}
-                            alt={item.name}
+                            src={item?.menuItem?.image || item?.menuItemId?.image}
+                            alt={getItemName(item)}
                             className="w-full h-full object-cover rounded-lg"
                           />
                         ) : (
@@ -401,15 +372,15 @@ const OrderDetailsContent = () => {
                         )}
                       </div>
                       <div>
-                        <h4 className="font-medium text-gray-900">{item.name}</h4>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                        <h4 className="font-medium text-gray-900">{getItemName(item)}</h4>
+                        <p className="text-sm text-gray-600">Quantity: {getItemQty(item)}</p>
                         {item.specialInstructions && (
                           <p className="text-xs text-gray-500 mt-1">Note: {item.specialInstructions}</p>
                         )}
                       </div>
                     </div>
                     <span className="font-medium text-gray-900">
-                      {formatCurrency(item.price * item.quantity)}
+                      {formatCurrency(getItemPrice(item) * getItemQty(item))}
                     </span>
                   </div>
                 ))}
@@ -424,26 +395,26 @@ const OrderDetailsContent = () => {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-900">{formatCurrency(order.subtotal || 0)}</span>
+                  <span className="text-gray-900">{formatCurrency(typeof order?.subtotal === 'number' ? order.subtotal : computedSubtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Delivery Fee</span>
-                  <span className="text-gray-900">{formatCurrency(order.deliveryFee || 0)}</span>
+                  <span className="text-gray-900">{formatCurrency(deliveryFeeNum)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax</span>
-                  <span className="text-gray-900">{formatCurrency(order.tax || 0)}</span>
+                  <span className="text-gray-900">{formatCurrency(taxNum)}</span>
                 </div>
-                {order.discount > 0 && (
+                {discountNum > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
-                    <span className="text-green-600">-{formatCurrency(order.discount)}</span>
+                    <span className="text-green-600">-{formatCurrency(discountNum)}</span>
                   </div>
                 )}
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-900">Total</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(order.total || 0)}</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(computedTotal)}</span>
                   </div>
                 </div>
               </div>
@@ -513,6 +484,43 @@ const OrderDetailsContent = () => {
           </div>
         </div>
       </div>
+
+      {/* Sticky Bottom Bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 backdrop-blur">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <div className="text-xs text-gray-600">Total</div>
+            <div className="text-lg font-semibold text-gray-900">{formatCurrency(computedTotal)}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isStudent() && isValidId(order._id) && (
+              <button onClick={() => navigate(`/orders/${order._id}/track`)} className="px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black">
+                Track Order
+              </button>
+            )}
+
+            {isRestaurantOwner() && canCancelOrder(order.status) && (
+              <button onClick={handleCancelOrder} disabled={isUpdating} className="px-4 h-10 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+                Cancel
+              </button>
+            )}
+
+            {isRestaurantOwner() && canUpdateStatus(order.status) && (
+              <button onClick={() => handleStatusUpdate(getNextStatus(order.status))} disabled={isUpdating} className="px-4 h-10 rounded-lg bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2">
+                {isUpdating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Updating
+                  </>
+                ) : (
+                  <>Update to {getNextStatus(order.status)?.charAt(0).toUpperCase() + getNextStatus(order.status)?.slice(1)}</>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Simple animations for modal */
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 200ms ease-out;
+}
+
+/* Global font setup */
+:root {
+  --font-display: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-body: 'Manrope', Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+}
+
+html { font-family: var(--font-body); }
+
+/* Prevent horizontal overflow on mobile and ensure full-width elements don't clip */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Improve safe-area handling globally */
+@supports(padding: max(0px)) {
+  .mobile-safe-area {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+}
+
+h1, h2, h3, .heading-display { font-family: var(--font-display); }
+
+/* Slightly lighter default heading weight for modern feel */
+h1,h2,h3,h4 { font-weight: 700; }
+
 /* Custom component styles */
 @layer components {
   .btn {
