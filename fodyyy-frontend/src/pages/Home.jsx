@@ -227,6 +227,58 @@ const Home = () => {
             Browse Menu 📋
           </Link>
         </section>
+
+        {/* Final CTA Section - placed right above the footer */}
+        <section className="mt-10 mb-8 animate-fade-in">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#111827] to-[#1F2937] text-white shadow-lg">
+            <div className="px-5 py-8 sm:px-8 sm:py-10 text-center">
+              <h2
+                className="text-3xl sm:text-4xl font-extrabold tracking-tight"
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+              >
+                Ready to Satisfy Your <span className="bg-gradient-to-r from-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">Cravings</span>?
+              </h2>
+              <p className="mt-3 text-sm sm:text-base text-gray-300 max-w-2xl mx-auto">
+                Join hundreds of students enjoying fast delivery from trusted local restaurants. Simple checkout, UPI/COD options, and real-time order tracking.
+              </p>
+
+              {/* Buttons */}
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  to="/register?role=student"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold text-white bg-gradient-to-r from-[#FF6B35] to-[#F7931E] shadow-[0_6px_18px_rgba(247,147,30,0.35)] focus-ring"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    🍽️ Order Food Now
+                  </span>
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+
+                <Link
+                  to="/register?role=restaurant"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold text-white border border-white/30 bg-transparent hover:bg-white/10 focus-ring"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    🤝 Partner With Us
+                  </span>
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+
+              {/* Trust badge */}
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-300">
+                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Free Registration</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
