@@ -322,7 +322,7 @@ h1,h2,h3,h4 { font-weight: 700; }
   }
   
   .mobile-navigation-spacing {
-    @apply pt-16 pb-20;
+    @apply pt-16 pb-[88px]; /* leave space for fixed bottom nav + footer */
   }
   
   .mobile-form-spacing {

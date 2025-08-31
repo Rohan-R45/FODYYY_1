@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -249,7 +249,7 @@ function App() {
                 path="/profile" 
                 element={
                   <PrivateRoute>
-                    <ComingSoon title="Profile Settings" />
+                    <Profile />
                   </PrivateRoute>
                 } 
               />
@@ -288,8 +288,8 @@ function App() {
             }}
           />
           
-          {/* Conditional Footer - Only on Home Page */}
-          <ConditionalFooter />
+          {/* Footer - Always visible and responsive */}
+          <Footer />
           
           {/* Bottom Navigation - Mobile Only. Render once at app root */}
           <BottomNavigation />

@@ -3,27 +3,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 /*
-  Mobile-first redesign notes:
-  - Compact, app-like layout inspired by leading food apps
-  - Smaller accent icons (16–32px) used sparingly
-  - Tight spacing and clear visual hierarchy
-  - Subtle shadows, gentle gradients from brand colors
-  - Minimal animations for polish
+  Modern, mobile-first food ordering homepage.
+  - Polished, gradient headline for hero section
+  - Responsive, with accent colors
+  - App-like, clear visual hierarchy
+  - Icons, categories, stats, testimonials for trust and engagement
 */
-
-const ACCENT = {
-  from: '#FF6B35',
-  to: '#F7931E',
-};
-
-const DecorativeEmoji = ({ emoji, className = '' }) => (
-  <span
-    className={`pointer-events-none select-none opacity-30 text-[18px] ${className}`}
-    aria-hidden
-  >
-    {emoji}
-  </span>
-);
 
 const StatChip = ({ icon, label, sublabel }) => (
   <div className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white border border-orange-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -105,7 +90,6 @@ const Home = () => {
 
   const testimonials = useMemo(() => testimonialsSeed, []);
   const categories = useMemo(() => categoriesSeed, []);
-
   useEffect(() => {
     const id = setInterval(() => {
       setCurrentTestimonial((p) => (p + 1) % testimonials.length);
@@ -125,42 +109,46 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Tiny subtle floating accents */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <DecorativeEmoji emoji="🍕" className="absolute top-20 left-4" />
-        <DecorativeEmoji emoji="🍔" className="absolute top-[140px] right-6" />
-        <DecorativeEmoji emoji="🍜" className="absolute bottom-24 left-6 hidden sm:block" />
-      </div>
-
       {/* Content container */}
       <main className="relative z-10 px-4 pt-3 pb-20 max-w-screen-sm mx-auto">
+
         {/* Availability chip */}
         <div className="mt-1">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium text-white bg-gradient-to-r from-[#FF6B35] to-[#F7931E] shadow-sm">
             <span className="text-[14px]" aria-hidden>📍</span>
-            Now Available at IIT & IISER Tirupati
+            Now Available at IIT &amp; IISER Tirupati
           </span>
         </div>
 
-        {/* Hero */}
+        {/* HERO SECTION: visually improved headline */}
         <section className="mt-3">
-          <h1 className="heading-display text-3xl sm:text-4xl font-[800] leading-[1.15] text-gray-900">
-            Delicious Food,
-            <br />
-            <span className="bg-gradient-to-r from-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">Delivered Fast</span>
-            <br />
-            to IIT & IISER Tirupati
+          <h1
+            className="text-4xl sm:text-5xl font-extrabold leading-tight mb-2"
+            style={{
+              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif"
+            }}
+          >
+            <span className="block">
+              Delicious Food,
+            </span>
+            <span
+              className="block bg-gradient-to-r from-[#FF6B35] to-[#F7931E] text-transparent bg-clip-text"
+              style={{ letterSpacing: '0.02em' }}
+            >
+              Delivered Fast
+            </span>
+            <span className="block text-gray-800 font-bold mt-1">
+              to IIT &amp; IISER Tirupati
+            </span>
           </h1>
-          <p className="mt-2 text-[15px] text-gray-600 font-[500]">
-            Craving your favorite meal? Get authentic, delicious food from local restaurants delivered right to your hostel room in just 30 minutes!
+          <p className="mt-2 text-base sm:text-lg text-gray-500 font-medium max-w-md">
+            Craving your favorite meal? Get authentic, delicious food from top local restaurants delivered <b>right to your hostel room in just 30 minutes!</b>
           </p>
-
           {/* Stats chips */}
           <div className="mt-4 flex items-center gap-2">
             <StatChip icon="✨" label="500+ Happy Students" sublabel="Satisfied customers" />
             <StatChip icon="🏪" label="5+ Partners" sublabel="Quality guaranteed" />
           </div>
-
           {/* CTA */}
           <div className="mt-4">
             <Link
@@ -230,7 +218,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Secondary CTA - keep close to bottom nav without huge gaps */}
+        {/* Secondary CTA */}
         <section className="mt-6">
           <Link
             to="/restaurants"
