@@ -211,7 +211,7 @@ const MenuPage = () => {
 
       {/* Sticky bottom bar when items in cart */}
       {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-40">
+        <div className="fixed inset-x-0 bottom-[64px] sm:bottom-0 bg-white border-t border-gray-200 p-3 z-50 mobile-safe-area">
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
             <div>
               <div className="text-xs text-gray-500">Total</div>
@@ -226,7 +226,7 @@ const MenuPage = () => {
           </div>
         </div>
       )}
-      {cartItems.length > 0 && <div className="h-20" />}
+      {cartItems.length > 0 && <div className="h-[112px] sm:h-0" />}
     </div>
   );
 };

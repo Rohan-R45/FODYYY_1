@@ -25,7 +25,7 @@ const Checkout = () => {
   });
   
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Load user data on mount
@@ -302,6 +302,8 @@ const Checkout = () => {
                 </h3>
                 
                 <div className="space-y-3">
+                  {/* UPI temporarily hidden */}
+                  {/*
                   <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                     <input
                       type="radio"
@@ -324,6 +326,7 @@ const Checkout = () => {
                       <img src="/images/upi-logo.png" alt="UPI" className="h-6 w-auto" onError={(e) => e.target.style.display = 'none'} />
                     </div>
                   </label>
+                  */}
                   
                   <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                     <input

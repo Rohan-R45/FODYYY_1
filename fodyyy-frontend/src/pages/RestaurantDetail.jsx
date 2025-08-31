@@ -192,37 +192,7 @@ const RestaurantDetailContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/restaurants')}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
-              aria-label="Back"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-sm font-medium text-gray-800 truncate max-w-[60%]">{restaurant?.name}</span>
-            <button
-              onClick={() => setShowCart(true)}
-              className="relative p-2 rounded-full hover:bg-gray-100"
-              aria-label="Cart"
-            >
-              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z" />
-              </svg>
-              {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-[10px] rounded-full h-4 w-4 grid place-items-center">
-                  {cartItems.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+
 
       {/* Banner + Info */}
       <div className="bg-white">
@@ -336,7 +306,7 @@ const RestaurantDetailContent = () => {
 
       {/* Sticky bottom bar when items in cart */}
       {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-40">
+        <div className="fixed inset-x-0 bottom-[64px] sm:bottom-0 bg-white border-t border-gray-200 p-3 z-50 mobile-safe-area">
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
             <div>
               <div className="text-xs text-gray-500">Total</div>
@@ -351,6 +321,7 @@ const RestaurantDetailContent = () => {
           </div>
         </div>
       )}
+      {cartItems.length > 0 && <div className="h-[112px] sm:h-0" />}
     </div>
   );
 };

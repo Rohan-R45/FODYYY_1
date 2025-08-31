@@ -110,7 +110,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Content container */}
-      <main className="relative z-10 px-4 pt-3 pb-20 max-w-screen-sm mx-auto">
+      <main className="relative z-10 px-4 pt-3 pb-4 max-w-screen-sm mx-auto">
 
         {/* Availability chip */}
         <div className="mt-1">
@@ -229,7 +229,7 @@ const Home = () => {
         </section>
 
         {/* Final CTA Section - placed right above the footer */}
-        <section className="mt-10 mb-8 animate-fade-in">
+        <section className="mt-8 mb-4 animate-fade-in">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#111827] to-[#1F2937] text-white shadow-lg">
             <div className="px-5 py-8 sm:px-8 sm:py-10 text-center">
               <h2
