@@ -92,7 +92,10 @@ api.interceptors.response.use(
       case 404:
         // Not found
         if (!originalRequest.url.includes('/auth/validate')) {
-          toast.error(data?.message || 'Resource not found.');
+          // Avoid duplicate toasts for student orders list page
+          if (!originalRequest.url.includes('/orders/student')) {
+            toast.error(data?.message || 'Resource not found.');
+          }
         }
         break;
 
@@ -130,7 +133,10 @@ api.interceptors.response.use(
 
       case 500:
         // Server error
-        toast.error('Server error. Please try again later.');
+        // Avoid duplicate toasts on student orders page to let screen-level error render once
+        if (!originalRequest.url.includes('/orders/student')) {
+          toast.error('Server error. Please try again later.');
+        }
         break;
 
       case 503:

@@ -42,11 +42,11 @@ const PaymentVerificationDialog = ({ isOpen, onClose, order, onVerify }) => {
               </div>
               <div className="flex justify-between">
                 <span>Customer:</span>
-                <span className="font-medium">{order.customer?.name}</span>
+                <span className="font-medium">{order.student?.name || order.customer?.name}</span>
               </div>
               <div className="flex justify-between">
                 <span>Amount:</span>
-                <span className="font-bold text-green-600">₹{order.totalAmount}</span>
+                <span className="font-bold text-green-600">{formatCurrency(order.totalAmount)}</span>
               </div>
               {order.upiTransactionId && (
                 <div className="flex justify-between">

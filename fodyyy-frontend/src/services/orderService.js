@@ -23,9 +23,11 @@ const orderService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching student orders:', error);
+      // Normalize message to match UI expectations and reduce noisy toasts
+      const msg = error.response?.data?.message || 'Failed to retrieve order history';
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to fetch orders'
+        message: msg
       };
     }
   },

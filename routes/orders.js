@@ -273,22 +273,25 @@ const formatOrderResponse = (order, userRole = null) => {
     estimatedDeliveryTime: order.estimatedDeliveryTime,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    items: order.items.map(item => ({
-      _id: item._id,
-      // Include stable name at top-level
-      name: item.name,
-      menuItem: {
-        _id: item.menuItemId._id,
-        name: item.menuItemId.name,
-        price: item.menuItemId.price,
-        category: item.menuItemId.category,
-        image: item.menuItemId.image
-      },
-      quantity: item.quantity,
-      price: item.price, // price locked at order time
-      specialInstructions: item.specialInstructions,
-      subtotal: item.price * item.quantity
-    })),
+    items: order.items.map(item => {
+      const menu = item && item.menuItemId && typeof item.menuItemId === 'object' ? item.menuItemId : {};
+      return {
+        _id: item._id,
+        // Include stable name at top-level (fallback to populated data if available)
+        name: item.name || menu.name,
+        menuItem: {
+          _id: menu._id || item.menuItemId || null,
+          name: menu.name || item.name,
+          price: (menu.price !== undefined ? menu.price : item.price),
+          category: menu.category || null,
+          image: menu.image || null
+        },
+        quantity: item.quantity,
+        price: item.price, // price locked at order time
+        specialInstructions: item.specialInstructions,
+        subtotal: item.price * item.quantity
+      };
+    }),
     restaurant: {
       _id: order.restaurantId._id,
       name: order.restaurantId.name,

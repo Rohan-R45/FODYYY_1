@@ -15,6 +15,7 @@ const Orders = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateRange, setDateRange] = useState('all');
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [error, setError] = useState('');
 
   const statusOptions = [
     { value: 'all', label: 'All Orders', count: 0 },
@@ -40,18 +41,34 @@ const Orders = () => {
   const loadOrders = async () => {
     try {
       setIsLoading(true);
+      setError('');
       const params = {};
       if (selectedStatus !== 'all') params.status = selectedStatus;
       if (dateRange !== 'all') params.dateRange = dateRange;
       const response = await orderService.getStudentOrders(params);
       if (response.success) {
-        setOrders(response.data.orders || response.data);
+        const payload = response.data;
+        const array = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.orders)
+              ? payload.orders
+              : [];
+        setOrders(array);
+        if (!array.length && selectedStatus !== 'all') {
+          // no toast for empty filtered lists
+        }
       } else {
-        toast.error('Failed to load orders');
+        const msg = response.message || 'Failed to load orders';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (error) {
       console.error('Error loading orders:', error);
-      toast.error('Failed to load orders');
+      const msg = error?.response?.data?.message || 'Could not load orders. Please try again.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +163,15 @@ const Orders = () => {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-6">
-        {filteredOrders.length > 0 ? (
+        {error ? (
+          <div className="bg-white rounded-xl shadow-sm border border-red-200 p-8 text-center">
+            <h3 className="text-lg font-semibold text-red-700 mb-2">Couldn’t load your orders</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button onClick={loadOrders} className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+              Retry
+            </button>
+          </div>
+        ) : filteredOrders.length > 0 ? (
           <div className="space-y-4">
             {filteredOrders.map((order) => (
               <OrderCard
@@ -198,7 +223,7 @@ const OrderCard = ({ order, isExpanded, onToggleExpand, onReorder, getStatusBadg
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <span>{order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}</span>
             <span>•</span>
-            <span>{order.paymentMethod === 'upi' ? 'UPI' : 'Cash on Delivery'}</span>
+            <span>{String(order.paymentMethod).toLowerCase().includes('upi') ? 'UPI' : 'Cash on Delivery'}</span>
           </div>
           <div className="flex items-center gap-2">
             {order.status === 'delivered' && (
@@ -247,13 +272,17 @@ const OrderCard = ({ order, isExpanded, onToggleExpand, onReorder, getStatusBadg
             <div>
               <h4 className="font-medium text-gray-900 mb-3">Delivery Information</h4>
               <div className="text-sm text-gray-600 space-y-1">
-                <p>{order.deliveryAddress?.street}</p>
-                {order.deliveryAddress?.landmark && <p>Near {order.deliveryAddress.landmark}</p>}
-                <p>
-                  {order.deliveryAddress?.city}, {order.deliveryAddress?.pincode}
-                </p>
+                <p>{typeof order.deliveryAddress === 'string' ? order.deliveryAddress : (order.deliveryAddress?.street || '')}</p>
+                {order.deliveryAddress && typeof order.deliveryAddress !== 'string' && order.deliveryAddress?.landmark && (
+                  <p>Near {order.deliveryAddress.landmark}</p>
+                )}
+                {order.deliveryAddress && typeof order.deliveryAddress !== 'string' && (
+                  <p>
+                    {order.deliveryAddress?.city}{order.deliveryAddress?.pincode ? `, ${order.deliveryAddress.pincode}` : ''}
+                  </p>
+                )}
                 <p className="mt-2">
-                  <span className="font-medium">Phone:</span> {order.phoneNumber}
+                  <span className="font-medium">Phone:</span> {order.phone || order.phoneNumber}
                 </p>
               </div>
             </div>
