@@ -370,24 +370,31 @@ const MenuManagement = () => {
   const handleToggleAvailability = async (itemId, currentStatus) => {
     try {
       console.log('🔄 Toggling availability for item:', itemId, 'Current:', currentStatus);
-      
-      const response = await menuService.updateMenuItem(itemId, {
-        isAvailable: !currentStatus
-      });
-      
-      if (response.success) {
-        toast.success(`Item ${!currentStatus ? 'enabled' : 'disabled'} successfully!`);
-        setMenuItems(prev => prev.map(item => 
-          item._id === itemId 
-            ? { ...item, isAvailable: !currentStatus }
-            : item
+
+      // Optimistic UI update for snappy UX
+      setMenuItems(prev => prev.map(item =>
+        item._id === itemId ? { ...item, isAvailable: !currentStatus } : item
+      ));
+
+      const response = await menuService.toggleAvailability(itemId);
+
+      if (!response.success) {
+        // Revert on failure
+        setMenuItems(prev => prev.map(item =>
+          item._id === itemId ? { ...item, isAvailable: currentStatus } : item
         ));
-      } else {
         toast.error(response.message || 'Failed to update item availability');
+        return;
       }
+
+      toast.success(`Item ${!currentStatus ? 'enabled' : 'disabled'} successfully!`);
     } catch (error) {
       console.error('Error toggling availability:', error);
-      
+      // Revert on error
+      setMenuItems(prev => prev.map(item =>
+        item._id === itemId ? { ...item, isAvailable: currentStatus } : item
+      ));
+
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please login again.');
       } else if (error.response?.data?.message) {

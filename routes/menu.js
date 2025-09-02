@@ -653,7 +653,8 @@ router.put('/:id',
         isVegetarian,
         isVegan,
         spiceLevel,
-        nutritionalInfo
+        nutritionalInfo,
+        isAvailable
       } = req.body;
 
       const menuItem = req.menuItem;
@@ -729,6 +730,7 @@ router.put('/:id',
       if (isVegetarian !== undefined) updateData.isVegetarian = Boolean(isVegetarian);
       if (isVegan !== undefined) updateData.isVegan = Boolean(isVegan);
       if (spiceLevel !== undefined) updateData.spiceLevel = spiceLevel;
+      if (isAvailable !== undefined) updateData.isAvailable = Boolean(isAvailable);
 
       // Handle nutritional info
       if (nutritionalInfo !== undefined) {

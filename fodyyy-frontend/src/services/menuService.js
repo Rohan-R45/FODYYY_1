@@ -40,6 +40,19 @@ const menuService = {
     }
   },
 
+  // Toggle availability (explicit dedicated endpoint)
+  async toggleAvailability(itemId) {
+    try {
+      console.log('📡 API: Toggling availability for:', itemId);
+      const response = await api.put(`/menu/${itemId}/toggle`);
+      console.log('📡 API: Toggle availability response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('📡 API: Error toggling availability:', error);
+      throw error;
+    }
+  },
+
   // Delete a menu item
   async deleteMenuItem(itemId) {
     try {
