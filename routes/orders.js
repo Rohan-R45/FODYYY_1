@@ -275,6 +275,9 @@ const formatOrderResponse = (order, userRole = null) => {
     updatedAt: order.updatedAt,
     items: order.items.map(item => {
       const menu = item && item.menuItemId && typeof item.menuItemId === 'object' ? item.menuItemId : {};
+      const unitPrice = Number(item.price);
+      const quantity = Number(item.quantity);
+      const totalPrice = unitPrice * quantity;
       return {
         _id: item._id,
         // Include stable name at top-level (fallback to populated data if available)
@@ -282,14 +285,18 @@ const formatOrderResponse = (order, userRole = null) => {
         menuItem: {
           _id: menu._id || item.menuItemId || null,
           name: menu.name || item.name,
-          price: (menu.price !== undefined ? menu.price : item.price),
+          price: (menu.price !== undefined ? menu.price : unitPrice),
           category: menu.category || null,
           image: menu.image || null
         },
-        quantity: item.quantity,
-        price: item.price, // price locked at order time
-        specialInstructions: item.specialInstructions,
-        subtotal: item.price * item.quantity
+        quantity,
+        // Explicit fields required by UI/requirements
+        unitPrice,
+        totalPrice,
+        // Backward compatibility with existing UI fields
+        price: unitPrice, // price locked at order time
+        subtotal: totalPrice,
+        specialInstructions: item.specialInstructions
       };
     }),
     restaurant: {
@@ -567,6 +574,26 @@ router.get('/restaurant/manage',
         const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : Number(order.discount || 0);
         const total = Math.max(0, subtotal + deliveryFee + tax - discount);
 
+        // Build detailed items preserving original order and using locked-in snapshot values
+        const items = order.items.map(item => {
+          const menu = item && item.menuItemId && typeof item.menuItemId === 'object' ? item.menuItemId : {};
+          const unitPrice = Number(item.price);
+          const quantity = Number(item.quantity);
+          return {
+            _id: item._id,
+            name: item.name || menu.name, // name captured at order time
+            quantity,
+            unitPrice,
+            price: unitPrice, // compatibility with existing UI
+            totalPrice: unitPrice * quantity,
+            // Optional minimal menu info for UI (icon/image)
+            menuItem: {
+              _id: menu._id || item.menuItemId || null,
+              image: menu.image || null
+            }
+          };
+        });
+
         return {
           _id: order._id,
           orderNumber: order.orderNumber,
@@ -587,6 +614,7 @@ router.get('/restaurant/manage',
             name: order.studentId.name,
             phone: order.studentId.phone
           },
+          items, // include detailed items for frontend rendering
           itemsCount: order.items.length,
           totalItems: order.items.reduce((sum, item) => sum + item.quantity, 0),
           canUpdateStatus: !['delivered', 'cancelled'].includes(order.status)
