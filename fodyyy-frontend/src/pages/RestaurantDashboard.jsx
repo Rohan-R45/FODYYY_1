@@ -359,7 +359,7 @@ const RestaurantDashboard = () => {
                         <div className="flex items-center gap-3">
                           {getStatusBadge(order.status)}
                           <span className="font-semibold text-gray-900">
-                            {formatCurrency(order.totalAmount)}
+                            {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.totalAmount || order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
                           </span>
                         </div>
                       </div>

@@ -262,7 +262,7 @@ const formatOrderResponse = (order, userRole = null) => {
     // Keep both number and detail object compatibility
     discount,
     discountDetails: order.discount || { amount: 0 },
-    // Explicit payable total for UI clients
+    // Explicit payable total for UI clients (final amount payable)
     total,
 
     deliveryAddress: order.deliveryAddress,
@@ -559,24 +559,39 @@ router.get('/restaurant/manage',
       const totalOrders = await Order.countDocuments(query);
       const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
-      // Format orders for management view
-      const formattedOrders = orders.map(order => ({
-        _id: order._id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        totalAmount: order.totalAmount,
-        createdAt: order.createdAt,
-        estimatedDeliveryTime: order.estimatedDeliveryTime,
-        student: {
-          _id: order.studentId._id,
-          name: order.studentId.name,
-          phone: order.studentId.phone
-        },
-        itemsCount: order.items.length,
-        totalItems: order.items.reduce((sum, item) => sum + item.quantity, 0),
-        canUpdateStatus: !['delivered', 'cancelled'].includes(order.status)
-      }));
+      // Format orders for management view (include computed final total)
+      const formattedOrders = orders.map(order => {
+        const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const deliveryFee = Number(order.deliveryFee || 0);
+        const tax = Number(order.tax || 0);
+        const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : Number(order.discount || 0);
+        const total = Math.max(0, subtotal + deliveryFee + tax - discount);
+
+        return {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          // Keep original field for compatibility
+          totalAmount: order.totalAmount,
+          // Provide explicit amounts for UI correctness
+          subtotal,
+          deliveryFee,
+          tax,
+          discount,
+          total,
+          createdAt: order.createdAt,
+          estimatedDeliveryTime: order.estimatedDeliveryTime,
+          student: {
+            _id: order.studentId._id,
+            name: order.studentId.name,
+            phone: order.studentId.phone
+          },
+          itemsCount: order.items.length,
+          totalItems: order.items.reduce((sum, item) => sum + item.quantity, 0),
+          canUpdateStatus: !['delivered', 'cancelled'].includes(order.status)
+        };
+      });
 
       res.json({
         success: true,
@@ -688,8 +703,15 @@ router.post('/',
         };
       });
 
-      // Calculate total amount
-      const totalAmount = calculateOrderTotal(orderItems);
+      // Calculate subtotal (sum of item prices at order time)
+      const subtotal = calculateOrderTotal(orderItems);
+
+      // Determine delivery fee using restaurant settings when available, else use defaults
+      // Defaults: charge = 30, freeAbove = 300 (matches frontend fallback)
+      const ds = (restaurant && restaurant.deliverySettings) ? restaurant.deliverySettings : {};
+      const deliveryCharge = typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30;
+      const freeAbove = typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300;
+      const deliveryFee = subtotal > 0 && subtotal >= freeAbove ? 0 : (subtotal > 0 ? deliveryCharge : 0);
 
       // Generate unique order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -705,7 +727,8 @@ router.post('/',
         studentId: req.user._id,
         restaurantId,
         items: orderItems,
-        totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
+        totalAmount: Math.round(subtotal * 100) / 100, // Store items sum as subtotal-compatible field
+        deliveryFee: Math.round(deliveryFee * 100) / 100,
         deliveryAddress,
         phone: phoneNumber,
         paymentMethod,
@@ -726,10 +749,12 @@ router.post('/',
 
       console.log(`✅ Order placed: ${orderNumber} by ${req.user.email} at ${restaurant.name}`);
 
+      // Ensure response includes explicit monetary breakdown and final total
+      const formatted = formatOrderResponse(order, 'student');
       res.status(201).json({
         success: true,
         message: 'Order placed successfully',
-        data: formatOrderResponse(order, 'student')
+        data: formatted
       });
 
     } catch (error) {
@@ -823,8 +848,22 @@ router.get('/student',
           $group: {
             _id: null,
             totalOrders: { $sum: 1 },
-            totalSpent: { $sum: '$totalAmount' },
-            averageOrderValue: { $avg: '$totalAmount' },
+            totalSpent: {
+              $sum: {
+                $subtract: [
+                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] },
+                  { $ifNull: ['$discount.amount', { $ifNull: ['$discount', 0] }] }
+                ]
+              }
+            },
+            averageOrderValue: {
+              $avg: {
+                $subtract: [
+                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] },
+                  { $ifNull: ['$discount.amount', { $ifNull: ['$discount', 0] }] }
+                ]
+              }
+            },
             statusCounts: {
               $push: '$status'
             }
@@ -1408,8 +1447,8 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   totalOrders: { $sum: 1 },
-                  totalRevenue: { $sum: '$totalAmount' },
-                  averageOrderValue: { $avg: '$totalAmount' }
+                  totalRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } },
+                  averageOrderValue: { $avg: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1419,7 +1458,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   todayOrders: { $sum: 1 },
-                  todayRevenue: { $sum: '$totalAmount' }
+                  todayRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1429,7 +1468,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   weekOrders: { $sum: 1 },
-                  weekRevenue: { $sum: '$totalAmount' }
+                  weekRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1439,7 +1478,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   monthOrders: { $sum: 1 },
-                  monthRevenue: { $sum: '$totalAmount' }
+                  monthRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1468,6 +1507,9 @@ router.get('/stats/dashboard',
                   orderNumber: 1,
                   status: 1,
                   totalAmount: 1,
+                  deliveryFee: 1,
+                  tax: 1,
+                  discount: 1,
                   createdAt: 1,
                   'student.name': 1
                 }
@@ -1488,14 +1530,21 @@ router.get('/stats/dashboard',
           acc[item._id] = item.count;
           return acc;
         }, {}),
-        recentOrders: result.recentOrders.map(order => ({
-          _id: order._id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          totalAmount: order.totalAmount,
-          customerName: order.student[0]?.name || 'Unknown',
-          createdAt: order.createdAt
-        }))
+        recentOrders: result.recentOrders.map(order => {
+          const subtotal = order.totalAmount || 0;
+          const deliveryFee = order.deliveryFee || 0;
+          const tax = order.tax || 0;
+          const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : (order.discount || 0);
+          const total = Math.max(0, subtotal + deliveryFee + tax - discount);
+          return {
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            status: order.status,
+            totalAmount: total, // send final total to frontend list
+            customerName: order.student[0]?.name || 'Unknown',
+            createdAt: order.createdAt
+          };
+        })
       };
 
       res.json({

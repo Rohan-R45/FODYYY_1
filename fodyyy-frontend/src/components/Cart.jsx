@@ -19,9 +19,33 @@ const Cart = ({ restaurantId }) => {
     : cartItems;
 
   const subtotal = relevantItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const deliveryFee = subtotal > 0 ? (subtotal >= 300 ? 0 : 30) : 0;
-  const tax = subtotal * 0.05; // 5% tax
-  const total = subtotal + deliveryFee + tax;
+  // Delivery fee is determined by the restaurant's delivery settings; fallback values are used if unavailable
+  const [deliverySettings, setDeliverySettings] = React.useState({ charge: 30, freeAbove: 300 });
+
+  React.useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const restId = restaurantId || (relevantItems[0]?.restaurantId);
+        if (!restId) return;
+        const resp = await (await import('../services/restaurantService')).default.getRestaurantById(restId);
+        if (resp?.success && resp?.data?.restaurant) {
+          const ds = resp.data.restaurant.deliverySettings || {};
+          setDeliverySettings({
+            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30,
+            freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
+          });
+        } else {
+          setDeliverySettings({ charge: 30, freeAbove: 300 });
+        }
+      } catch {
+        setDeliverySettings({ charge: 30, freeAbove: 300 });
+      }
+    };
+    fetchDeliverySettings();
+  }, [restaurantId, relevantItems.length]);
+
+  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300) ? 0 : (subtotal > 0 ? (deliverySettings.charge || 30) : 0);
+  const total = subtotal + deliveryFee;
 
   if (relevantItems.length === 0) {
     return (
@@ -175,12 +199,6 @@ const Cart = ({ restaurantId }) => {
             <span className={`${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
               {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
             </span>
-          </div>
-
-          {/* Tax */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Tax (5%)</span>
-            <span className="text-gray-900">{formatCurrency(tax)}</span>
           </div>
 
           {/* Total */}

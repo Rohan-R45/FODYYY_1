@@ -53,9 +53,36 @@ const Checkout = () => {
 
   const cartRestaurant = getCartRestaurant();
   const subtotal = getCartTotal();
-  const deliveryFee = subtotal >= 300 ? 0 : 30;
-  const tax = subtotal * 0.05;
-  const total = subtotal + deliveryFee + tax;
+  // Delivery fee: fetch from restaurant settings via restaurant details, fallback to 30 if unavailable
+  const [deliverySettings, setDeliverySettings] = useState({ charge: 30, freeAbove: 300 });
+
+  useEffect(() => {
+    // Load latest delivery settings from the restaurant endpoint on mount and whenever cart changes restaurant
+    const fetchDeliverySettings = async () => {
+      try {
+        if (!cartRestaurant?.id) return;
+        const resp = await (await import('../services/restaurantService')).default.getRestaurantById(cartRestaurant.id);
+        if (resp?.success && resp?.data?.restaurant) {
+          const ds = resp.data.restaurant.deliverySettings || {};
+          setDeliverySettings({
+            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30,
+            freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
+          });
+        } else {
+          setDeliverySettings({ charge: 30, freeAbove: 300 });
+        }
+      } catch (e) {
+        setDeliverySettings({ charge: 30, freeAbove: 300 });
+      }
+    };
+
+    fetchDeliverySettings();
+  }, [cartRestaurant?.id]);
+
+  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300)
+    ? 0
+    : (deliverySettings.charge || 30);
+  const total = subtotal + deliveryFee;
 
   const handleAddressChange = (field, value) => {
     setDeliveryAddress(prev => ({
@@ -397,11 +424,6 @@ const Checkout = () => {
                     <span className={deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}>
                       {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
                     </span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax (5%)</span>
-                    <span className="text-gray-900">{formatCurrency(tax)}</span>
                   </div>
                   
                   <div className="flex justify-between text-lg font-semibold pt-3 border-t border-gray-200">

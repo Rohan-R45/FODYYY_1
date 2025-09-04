@@ -506,6 +506,7 @@ router.get('/:id', async (req, res) => {
         : 0
     };
 
+    // Include delivery settings in restaurant payload if present (for student checkout to pick up latest fees)
     res.json({
       success: true,
       message: 'Restaurant details retrieved successfully',

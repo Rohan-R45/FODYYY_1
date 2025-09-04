@@ -146,7 +146,7 @@ const OrderDetailsCard = ({ order, restaurant, items }) => {
           <div className="flex justify-between items-center">
             <p className="text-lg font-semibold text-gray-900">Total</p>
             <p className="text-lg font-bold text-green-600">
-              {formatCurrency(order.totalAmount)}
+              {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.subtotal || order.totalAmount || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
             </p>
           </div>
         </div>

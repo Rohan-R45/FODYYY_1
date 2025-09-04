@@ -338,6 +338,16 @@ const Navbar = () => {
                           {isStudent() && (
                             <>
                               <Link
+                                to="/student"
+                                className="flex items-center px-4 py-3 text-[#2D3748] hover:bg-gray-50 transition-colors duration-200 min-h-[44px]"
+                                onClick={() => setIsProfileMenuOpen(false)}
+                              >
+                                <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                                Dashboard
+                              </Link>
+                              <Link
                                 to="/orders"
                                 className="flex items-center px-4 py-3 text-[#2D3748] hover:bg-gray-50 transition-colors duration-200 min-h-[44px]"
                                 onClick={() => setIsProfileMenuOpen(false)}
@@ -600,6 +610,20 @@ const Navbar = () => {
                     <div className="p-4 space-y-2">
                       {isStudent() && (
                         <>
+                          <Link
+                            to="/student"
+                            className={`flex items-center p-4 rounded-xl transition-all duration-300 min-h-[52px] ${
+                              isActivePath('/student') 
+                                ? 'bg-gradient-to-r from-[#FF6B35]/10 to-[#F7931E]/10 text-[#FF6B35] border-l-4 border-[#FF6B35]' 
+                                : 'text-[#2D3748] hover:bg-gray-50'
+                            }`}
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <span className="font-medium">Dashboard</span>
+                          </Link>
                           <Link
                             to="/restaurants"
                             className={`flex items-center p-4 rounded-xl transition-all duration-300 min-h-[52px] ${

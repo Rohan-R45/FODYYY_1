@@ -215,7 +215,7 @@ const OrderCard = ({ order, isExpanded, onToggleExpand, onReorder, getStatusBadg
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {getStatusBadge(order.status)}
-            <span className="font-semibold text-gray-900">{formatCurrency(order.totalAmount)}</span>
+            <span className="font-semibold text-gray-900">{formatCurrency((typeof order.total === 'number') ? order.total : (order.subtotal + (order.deliveryFee || 0) + (order.tax || 0) - (typeof order.discount === 'number' ? order.discount : (order?.discount?.amount || 0))))}</span>
           </div>
         </div>
 

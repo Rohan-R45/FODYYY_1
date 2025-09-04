@@ -46,7 +46,7 @@ const PaymentVerificationDialog = ({ isOpen, onClose, order, onVerify }) => {
               </div>
               <div className="flex justify-between">
                 <span>Amount:</span>
-                <span className="font-bold text-green-600">{formatCurrency(order.totalAmount)}</span>
+                <span className="font-bold text-green-600">{formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.subtotal || order.totalAmount || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}</span>
               </div>
               {order.upiTransactionId && (
                 <div className="flex justify-between">
@@ -295,7 +295,7 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
           </div>
           <div className="text-right">
             <p className="text-lg font-bold text-green-600">
-              {formatCurrency(order.totalAmount)}
+              {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.totalAmount || order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
             </p>
             <p className="text-sm text-gray-500">
               {getRelativeTime(order.createdAt)}
