@@ -114,7 +114,7 @@ const ForgotPassword = () => {
         {/* Header */}
         <div className="text-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-bold text-primary-blue">FODYYY</h1>
+            <h1 className="text-4xl font-bold text-primary-blue">FOODY</h1>
             <p className="text-sm text-gray-600 mt-1">IIT & IISER Tirupati Food Delivery</p>
           </Link>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">

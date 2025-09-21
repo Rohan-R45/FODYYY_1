@@ -428,7 +428,7 @@ const Register = () => {
                   Create your account
                 </h2>
                 <p className="mt-2 text-gray-600">
-                  Join FODYYY and start {formData.role === 'student' ? 'ordering delicious food' : 'serving hungry students'}
+                  Join FOODY and start {formData.role === 'student' ? 'ordering delicious food' : 'serving hungry students'}
                 </p>
               </div>
             </div>
@@ -870,7 +870,7 @@ const Register = () => {
           {/* Mobile Header */}
           <div className="text-center pt-12 pb-8 px-6">
             <h1 className="text-4xl font-bold text-white font-poppins mb-2">
-              FODYYY
+              FOODY
             </h1>
             <p className="text-orange-100 text-lg">Join Our Community!</p>
             <p className="text-orange-200 text-sm mt-2">Create your account to get started</p>
@@ -885,7 +885,7 @@ const Register = () => {
                   Create your account
                 </h2>
                 <p className="mt-2 text-gray-600 text-sm">
-                  Join FODYYY and start {formData.role === 'student' ? 'ordering delicious food' : 'serving hungry students'}
+                  Join FOODY and start {formData.role === 'student' ? 'ordering delicious food' : 'serving hungry students'}
                 </p>
               </div>
 

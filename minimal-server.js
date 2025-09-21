@@ -42,7 +42,7 @@ try {
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Minimal FODYYY API Server', status: 'running' });
+  res.json({ message: 'Minimal FOODY API Server', status: 'running' });
 });
 
 // 404 handler

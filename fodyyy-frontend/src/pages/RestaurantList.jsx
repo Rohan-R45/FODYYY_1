@@ -4,6 +4,7 @@ import restaurantService from '../services/restaurantService';
 import { createSafeLinkProps } from '../utils/navigation';
 import { isValidId } from '../utils/validation';
 import toast from 'react-hot-toast';
+import OptimizedImage from '../components/OptimizedImage';
 
 const RestaurantList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -98,8 +99,12 @@ const RestaurantList = () => {
     { value: 'createdAt', label: 'Newest', order: 'desc' }
   ];
 
+  // Debounced fetch when URL params change
   useEffect(() => {
-    loadRestaurants();
+    const handle = setTimeout(() => {
+      loadRestaurants();
+    }, 300); // 300ms debounce
+    return () => clearTimeout(handle);
   }, [searchParams]);
 
   const loadRestaurants = async () => {
@@ -530,10 +535,12 @@ const RestaurantList = () => {
                     >
                     <div className="relative">
                       {restaurant.image ? (
-                        <img
+                        <OptimizedImage
                           src={restaurant.image}
                           alt={restaurant.name}
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                          width={16}
+                          height={9}
+                          className="w-full h-48"
                         />
                       ) : (
                         <div className="w-full h-48 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
@@ -541,7 +548,7 @@ const RestaurantList = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
                           </svg>
                         </div>
-                      )}
+                      ) }
                       <div className="absolute top-3 right-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           restaurant.isActive 

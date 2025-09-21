@@ -95,7 +95,7 @@ const Navbar = () => {
               </div>
               <div className="block">
                 <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">
-                  FODYYY
+                  FOODY
                 </span>
                 <div className="text-xs text-gray-500 -mt-1 hidden sm:block">IIT & IISER Tirupati</div>
               </div>

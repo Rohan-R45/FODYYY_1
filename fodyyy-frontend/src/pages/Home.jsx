@@ -52,7 +52,7 @@ const testimonialsSeed = [
     role: 'B.Tech CSE, 3rd Year',
     avatar: '👩‍🎓',
     text:
-      'FODYYY has been a lifesaver during exam season! Fresh, hot meals delivered right to my dorm. The biryani from Spice Garden is my absolute favorite!',
+      'FOODY has been a lifesaver during exam season! Fresh, hot meals delivered right to my dorm. The biryani from Spice Garden is my absolute favorite!',
     rating: 5,
   },
   {

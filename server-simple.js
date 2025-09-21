@@ -135,7 +135,7 @@ console.log('✅ All routes mounted successfully');
 // Basic route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Welcome to FODYYY API', 
+    message: 'Welcome to FOODY API', 
     status: 'Server is running!',
     timestamp: new Date().toISOString()
   });

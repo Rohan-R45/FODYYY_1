@@ -315,7 +315,7 @@ const Login = () => {
             <div className="text-center mb-8">
               <Link to="/" className="inline-block group">
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent font-poppins">
-                  FODYYY
+                  FOODY
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">IIT & IISER Tirupati Food Delivery</p>
               </Link>
@@ -529,7 +529,7 @@ const Login = () => {
           {/* Mobile Header */}
           <div className="text-center pt-12 pb-8 px-6">
             <h1 className="text-4xl font-bold text-white font-poppins mb-2">
-              FODYYY
+              FOODY
             </h1>
             <p className="text-orange-100 text-lg">Welcome Back!</p>
             <p className="text-orange-200 text-sm mt-2">Sign in to continue ordering</p>

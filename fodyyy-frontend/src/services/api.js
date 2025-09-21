@@ -24,71 +24,106 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle common errors
+// Response interceptor to handle common errors with retries for idempotent requests
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config || {};
 
-    // Handle network errors
+    // Helper: sleep for ms
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    const method = (originalRequest.method || 'get').toLowerCase();
+    const isIdempotent = ['get', 'head', 'options'].includes(method);
+    const maxRetries = Number(import.meta.env.VITE_API_RETRY_COUNT || 3);
+    const baseDelay = Number(import.meta.env.VITE_API_RETRY_BASE_MS || 300);
+
+    // Network error (no response): optionally retry idempotent requests
     if (!error.response) {
+      if (isIdempotent) {
+        originalRequest.__retryCount = originalRequest.__retryCount || 0;
+        if (originalRequest.__retryCount < maxRetries) {
+          const delay = baseDelay * Math.pow(2, originalRequest.__retryCount) + Math.random() * 100;
+          originalRequest.__retryCount += 1;
+          await sleep(delay);
+          return api(originalRequest);
+        }
+      }
       toast.error('Network error. Please check your connection.');
       return Promise.reject(error);
     }
 
-    const { status, data } = error.response;
+    const { status, data, headers } = error.response;
 
-    switch (status) {
-      case 401:
-        // Skip automatic handling for auth endpoints - let authService handle them
-        if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/register')) {
-          return Promise.reject(error);
-        }
-        
-        // Unauthorized - token expired or invalid
-        if (!originalRequest._retry) {
-          originalRequest._retry = true;
-          
-          try {
-            // Try to refresh token
-            const refreshResponse = await api.post('/auth/refresh');
-            
-            // Backend returns { success: true, data: { token } }
-            let token;
-            if (refreshResponse.data.success && refreshResponse.data.data) {
-              token = refreshResponse.data.data.token;
-            } else {
-              throw new Error('Invalid refresh response format');
-            }
-            
-            // Update token in localStorage
-            localStorage.setItem('token', token);
-            
-            // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          } catch (refreshError) {
-            // Refresh failed, redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-            return Promise.reject(refreshError);
+    // 401: token refresh flow (do not apply generic retry before refresh)
+    if (status === 401) {
+      // Skip automatic handling for auth endpoints - let authService handle them
+      if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/register')) {
+        return Promise.reject(error);
+      }
+
+      // Unauthorized - token expired or invalid
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          // Try to refresh token
+          const refreshResponse = await api.post('/auth/refresh');
+          // Backend returns { success: true, data: { token } }
+          let token;
+          if (refreshResponse.data.success && refreshResponse.data.data) {
+            token = refreshResponse.data.data.token;
+          } else {
+            throw new Error('Invalid refresh response format');
           }
-        } else {
-          // Already tried to refresh, redirect to login
+          // Update token in localStorage
+          localStorage.setItem('token', token);
+          // Retry original request with new token
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/login';
+          return Promise.reject(refreshError);
         }
-        break;
+      } else {
+        // Already tried to refresh, redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
 
+    // Generic retry for transient errors on idempotent requests
+    const shouldRetry =
+      isIdempotent && (
+        status === 429 || (status >= 500 && status < 600)
+      );
+
+    if (shouldRetry) {
+      originalRequest.__retryCount = originalRequest.__retryCount || 0;
+      if (originalRequest.__retryCount < maxRetries) {
+        let delay = baseDelay * Math.pow(2, originalRequest.__retryCount) + Math.random() * 120;
+        // Honor Retry-After header (seconds) when present for 429/503
+        const retryAfter = headers?.['retry-after'];
+        if (retryAfter && !Number.isNaN(Number(retryAfter))) {
+          delay = Number(retryAfter) * 1000;
+        }
+        originalRequest.__retryCount += 1;
+        await sleep(delay);
+        return api(originalRequest);
+      }
+    }
+
+    switch (status) {
       case 403:
         // Forbidden - insufficient permissions
         toast.error(data?.message || 'You don\'t have permission to perform this action.');
         break;
-
       case 404:
         // Not found
         if (!originalRequest.url.includes('/auth/validate')) {
@@ -98,7 +133,6 @@ api.interceptors.response.use(
           }
         }
         break;
-
       case 400:
         // Bad request - skip automatic handling for auth endpoints
         if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/register')) {
@@ -106,7 +140,6 @@ api.interceptors.response.use(
         }
         toast.error(data?.message || 'Bad request.');
         break;
-
       case 422:
         // Validation error - skip automatic handling for auth endpoints
         if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/register')) {
@@ -125,25 +158,20 @@ api.interceptors.response.use(
           toast.error(data?.message || 'Validation error.');
         }
         break;
-
       case 429:
-        // Too many requests
+        // Too many requests (exhausted retries)
         toast.error('Too many requests. Please try again later.');
         break;
-
       case 500:
-        // Server error
-        // Avoid duplicate toasts on student orders page to let screen-level error render once
+        // Server error (exhausted retries)
         if (!originalRequest.url.includes('/orders/student')) {
           toast.error('Server error. Please try again later.');
         }
         break;
-
       case 503:
-        // Service unavailable
+        // Service unavailable (exhausted retries)
         toast.error('Service temporarily unavailable. Please try again later.');
         break;
-
       default:
         // Other errors
         toast.error(data?.message || 'An unexpected error occurred.');

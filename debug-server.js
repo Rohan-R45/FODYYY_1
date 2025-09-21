@@ -64,7 +64,7 @@ try {
   
   // Add basic route
   app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to FODYYY API', status: 'Server is running!' });
+    res.json({ message: 'Welcome to FOODY API', status: 'Server is running!' });
   });
   console.log('✅ Basic route added');
   

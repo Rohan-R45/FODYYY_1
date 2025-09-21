@@ -1,330 +1,274 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const slowDown = require('express-slow-down');
+const config = require('./config');
+const logger = require('./utils/logger');
 require('dotenv').config();
 
 const app = express();
 
-// Trust proxy for production deployments
-app.set('trust proxy', 1);
+// Trust proxy for production deployments (needed for secure cookies and rate limiters behind proxies)
+if (config.TRUST_PROXY) app.set('trust proxy', 1);
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  console.log(`   Origin: ${req.get('Origin') || 'No origin'}`);
-  next();
-});
+// --- Request logging (structured) ---
+app.use(logger.requestLogger());
 
-// Body parsing middleware
+// --- Security & Performance ---
+app.use(helmet());
+app.use(compression());
+
+// --- Body parsing ---
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5174', 
-  'http://localhost:5175',
-  'https://fodyyy.netlify.app',
-  'https://fodyyy-1.onrender.com'
-];
-
-console.log('🌐 CORS allowed origins:', allowedOrigins);
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('✅ CORS allowed for origin:', origin);
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+// --- Basic MongoDB injection prevention & input sanitization ---
+function sanitizeKeys(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete obj[key];
+      continue;
     }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-}));
+    sanitizeKeys(obj[key]);
+  }
+}
+app.use((req, _res, next) => {
+  try {
+    if (req.body) sanitizeKeys(req.body);
+    if (req.query) sanitizeKeys(req.query);
+    if (req.params) sanitizeKeys(req.params);
+  } catch (_) {}
+  next();
+});
 
-// MongoDB connection
+// Additional sanitization (XSS-safe escaping of strings)
+try {
+  const { sanitizeInput } = require('./middleware/validation');
+  app.use(sanitizeInput);
+} catch (_) {
+  // If validation helpers are not available, continue silently
+}
+
+// --- CORS (env-driven) ---
+const allowedOrigins = (config.ALLOWED_ORIGINS || [])
+  .concat(config.FRONTEND_URL ? [config.FRONTEND_URL] : [])
+  .filter(Boolean);
+
+logger.info('CORS allowed origins configured', { allowedOrigins });
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin) return cb(null, true); // allow non-browser clients
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-auth-token'],
+  })
+);
+
+// --- Rate limiting & speed limits ---
+const generalLimiter = rateLimit({
+  windowMs: config.RATE_LIMIT_WINDOW_MS, // default 15 min
+  max: config.RATE_LIMIT_MAX_REQUESTS,   // default 100 reqs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(generalLimiter);
+
+// Stricter auth limiter
+const authLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 min
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const authSpeed = slowDown({
+  windowMs: 5 * 60 * 1000, // 5 min
+  delayAfter: 5,
+  delayMs: (hits) => Math.min(2000, hits * 200),
+});
+app.use('/api/auth/login', authLimiter, authSpeed);
+app.use('/api/auth/register', authLimiter, authSpeed);
+
+// Order creation limiter (POST only)
+const orderLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 min
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/orders', (req, res, next) => {
+  if (req.method === 'POST') return orderLimiter(req, res, next);
+  next();
+});
+
+// --- Optional Redis caching for frequently accessed data ---
+let redisClient = null;
+(async () => {
+  if (config.REDIS_URL) {
+    try {
+      // Try to load redis client dynamically to avoid hard dependency
+      const { createClient } = require('redis');
+      redisClient = createClient({ url: config.REDIS_URL });
+      redisClient.on('error', (err) => logger.warn('Redis client error', { err: err.message }));
+      await redisClient.connect();
+      logger.info('Redis connected');
+    } catch (err) {
+      logger.warn('Redis not enabled (missing package or connection error)', { error: err.message });
+      redisClient = null;
+    }
+  }
+})();
+
+function cacheMiddleware(ttlSeconds = 60, keyFn) {
+  return async (req, res, next) => {
+    try {
+      if (!redisClient || req.method !== 'GET') return next();
+      const key = (keyFn ? keyFn(req) : `cache:${req.originalUrl}`);
+      const cached = await redisClient.get(key);
+      if (cached) {
+        res.set('X-Cache', 'HIT');
+        return res.status(200).json(JSON.parse(cached));
+      }
+      const originalJson = res.json.bind(res);
+      res.json = (body) => {
+        if (res.statusCode === 200) {
+          redisClient
+            .setEx(key, ttlSeconds, JSON.stringify(body))
+            .catch((e) => logger.warn('Redis setEx failed', { error: e.message }));
+        }
+        res.set('X-Cache', 'MISS');
+        return originalJson(body);
+      };
+      next();
+    } catch (e) {
+      logger.warn('Cache middleware error', { error: e.message });
+      next();
+    }
+  };
+}
+
+// Apply caching for commonly-hit GET endpoints
+app.use('/api/restaurants', cacheMiddleware(60));
+app.use('/api/menu', cacheMiddleware(60));
+
+// --- MongoDB connection with pooling ---
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/fodyyy');
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
+    const conn = await mongoose.connect(config.MONGODB_URI, {
+      maxPoolSize: config.MONGODB_POOL_SIZE || 10,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+    });
+    logger.info('MongoDB connected', { host: conn.connection.host });
+
+    // Ensure indexes for performance (models must be required after connection)
+    try {
+      const { User, Restaurant, MenuItem, Order } = require('./models');
+      await Promise.all([
+        User.init(),
+        Restaurant.init(),
+        MenuItem.init(),
+        Order.init(),
+      ]);
+      logger.info('Model indexes ensured');
+    } catch (idxErr) {
+      logger.warn('Index initialization skipped/failed', { error: idxErr.message });
     }
+  } catch (error) {
+    logger.error('MongoDB connection failed', { error: error.message });
+    if (config.isProduction()) process.exit(1);
   }
 };
-
-// Connect to database
 connectDB();
 
-// Import routes with error handling
-console.log('🔄 Loading routes...');
+// --- Load routes with error protection ---
+logger.info('Loading routes...');
+let authRoutes, usersRoutes, restaurantRoutes, menuRoutes, orderRoutes;
 
-let authRoutes, restaurantRoutes, menuRoutes, orderRoutes;
+try { authRoutes = require('./routes/auth'); logger.info('Auth routes loaded'); } 
+catch (e) { logger.error('Failed to load auth routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-try {
-  console.log('📁 Loading auth routes...');
-  authRoutes = require('./routes/auth');
-  console.log('✅ Auth routes loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load auth routes:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
+try { usersRoutes = require('./routes/users'); logger.info('Users routes loaded'); } 
+catch (e) { logger.error('Failed to load users routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-// Load users routes
-let usersRoutes;
-try {
-  console.log('📁 Loading users routes...');
-  usersRoutes = require('./routes/users');
-  console.log('✅ Users routes loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load users routes:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
+try { restaurantRoutes = require('./routes/restaurants'); logger.info('Restaurant routes loaded'); } 
+catch (e) { logger.error('Failed to load restaurant routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-// Load restaurant routes
-try {
-  console.log('📁 Loading restaurant routes...');
-  restaurantRoutes = require('./routes/restaurants');
-  console.log('✅ Restaurant routes loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load restaurant routes:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
+try { menuRoutes = require('./routes/menu'); logger.info('Menu routes loaded'); } 
+catch (e) { logger.error('Failed to load menu routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-// Load menu routes
-try {
-  console.log('📁 Loading menu routes...');
-  menuRoutes = require('./routes/menu');
-  console.log('✅ Menu routes loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load menu routes:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
+try { orderRoutes = require('./routes/orders'); logger.info('Order routes loaded'); } 
+catch (e) { logger.error('Failed to load order routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-// Load order routes
-try {
-  console.log('📁 Loading order routes...');
-  orderRoutes = require('./routes/orders');
-  console.log('✅ Order routes loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load order routes:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-}
+// --- Mount routes ---
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/orders', orderRoutes);
 
-console.log('✅ All route files loaded successfully');
-
-// Apply routes with logging
-console.log('🔗 Mounting routes...');
-
-app.use('/api/auth', (req, res, next) => {
-  console.log(`🔐 Auth route: ${req.method} ${req.path}`);
-  next();
-}, authRoutes);
-
-app.use('/api/users', (req, res, next) => {
-  console.log(`👤 Users route: ${req.method} ${req.path}`);
-  next();
-}, usersRoutes);
-
-app.use('/api/restaurants', (req, res, next) => {
-  console.log(`🏪 Restaurant route: ${req.method} ${req.path}`);
-  next();
-}, restaurantRoutes);
-
-app.use('/api/menu', (req, res, next) => {
-  console.log(`📋 Menu route: ${req.method} ${req.path}`);
-  next();
-}, menuRoutes);
-
-app.use('/api/orders', (req, res, next) => {
-  console.log(`📦 Order route: ${req.method} ${req.path}`);
-  next();
-}, orderRoutes);
-
-console.log('✅ All routes mounted successfully');
-
-// Basic route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Welcome to FODYYY API', 
-    status: 'Server is running!',
-    timestamp: new Date().toISOString()
-  });
+// --- Health & basic routes ---
+app.get('/', (_req, res) => {
+  res.json({ message: 'Welcome to FOODY API', status: 'Server is running!', timestamp: new Date().toISOString() });
 });
 
-// Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    routes: {
-      auth: {
-        login: 'POST /api/auth/login',
-        register: 'POST /api/auth/register',
-        me: 'GET /api/auth/me',
-        logout: 'POST /api/auth/logout',
-        test: 'GET /api/auth/test'
-      },
-      users: {
-        profile: 'GET /api/users/:id',
-        update: 'PUT /api/users/:id',
-        list: 'GET /api/users (admin only)'
-      },
-      restaurants: {
-        list: 'GET /api/restaurants',
-        test: 'GET /api/restaurants/test'
-      },
-      menu: {
-        byRestaurant: 'GET /api/menu/restaurant/:restaurantId',
-        test: 'GET /api/menu/test'
-      },
-      orders: {
-        list: 'GET /api/orders',
-        create: 'POST /api/orders',
-        test: 'GET /api/orders/test'
-      }
-    },
-    database: {
-      connected: mongoose.connection.readyState === 1,
-      host: mongoose.connection.host || 'Not connected'
-    }
-  });
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString(), environment: config.NODE_ENV, database: { connected: mongoose.connection.readyState === 1, host: mongoose.connection.host || 'Not connected' } });
 });
 
-// Test route to verify API is working
-app.get('/api/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API is working!',
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    path: req.path
-  });
-});
-
-// Test auth route specifically
-app.post('/api/test-login', (req, res) => {
-  console.log('🧪 Test login route hit:', req.body);
-  res.json({
-    success: true,
-    message: 'Test login route is working!',
-    body: req.body,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handling middleware
-const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || 500;
-  let message = err.message || 'Server Error';
-
-  console.error('❌ Error:', err.message);
-  console.error('Stack:', err.stack);
-
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    statusCode = 400;
-    message = 'Resource not found';
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    statusCode = 400;
-    message = 'Duplicate field value entered';
-  }
-
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    statusCode = 400;
-    message = Object.values(err.errors).map(val => val.message).join(', ');
-  }
-
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    statusCode = 401;
-    message = 'Invalid token';
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    statusCode = 401;
-    message = 'Token expired';
-  }
-
-  res.status(statusCode).json({
-    success: false,
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-};
-
-// 404 handler for undefined routes
+// --- 404 handler ---
 app.use((req, res) => {
-  console.log(`❌ Route not found: ${req.method} ${req.originalUrl}`);
-  
-  res.status(404).json({
-    success: false,
-    error: `Route ${req.method} ${req.originalUrl} not found`,
-    availableRoutes: {
-      auth: '/api/auth/login, /api/auth/register, /api/auth/me',
-      restaurants: '/api/restaurants',
-      menu: '/api/menu',
-      orders: '/api/orders',
-      test: '/api/test, /api/test-login'
-    }
-  });
+  logger.warn('Route not found', { method: req.method, url: req.originalUrl });
+  res.status(404).json({ success: false, error: `Route ${req.method} ${req.originalUrl} not found` });
 });
 
-// Use error handler
-app.use(errorHandler);
+// --- Error logging & centralized error handler ---
+app.use(logger.errorLogger());
+try {
+  const errorHandler = require('./middleware/errorHandler');
+  app.use(errorHandler);
+} catch (_) {
+  // Fallback basic handler
+  app.use((err, _req, res, _next) => {
+    logger.error('Unhandled error', { error: err.message, stack: err.stack });
+    res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Server Error' });
+  });
+}
 
-// Graceful shutdown
+// --- Graceful shutdown ---
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed.');
-  } catch (error) {
-    console.error('Error closing MongoDB connection:', error.message);
-  }
+  logger.info('SIGTERM received, shutting down gracefully...');
+  try { await mongoose.connection.close(); logger.info('MongoDB connection closed.'); } catch (e) { logger.warn('Error closing MongoDB connection', { error: e.message }); }
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed.');
-  } catch (error) {
-    console.error('Error closing MongoDB connection:', error.message);
-  }
+  logger.info('SIGINT received, shutting down gracefully...');
+  try { await mongoose.connection.close(); logger.info('MongoDB connection closed.'); } catch (e) { logger.warn('Error closing MongoDB connection', { error: e.message }); }
   process.exit(0);
 });
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+const PORT = config.PORT;
+const HOST = config.isProduction() ? '0.0.0.0' : 'localhost';
 
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on ${HOST}:${PORT}`);
-  console.log(`📍 Server URL: http://${HOST}:${PORT}`);
-  console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔑 JWT Secret configured: ${process.env.JWT_SECRET ? 'Yes' : 'No'}`);
-  console.log(`🗄️  MongoDB URI configured: ${process.env.MONGODB_URI ? 'Yes' : 'No'}`);
+  logger.info('Server started', {
+    mode: config.NODE_ENV,
+    host: HOST,
+    port: PORT,
+    environment: config.NODE_ENV,
+    jwtConfigured: !!config.JWT_SECRET,
+    mongoConfigured: !!config.MONGODB_URI,
+  });
 });
 
 module.exports = app;
