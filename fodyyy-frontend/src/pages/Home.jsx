@@ -790,12 +790,12 @@ const Home = () => {
                     </Link>
                   </li>
                   <li>
-                    <a href="mailto:support@foody.com" className="text-gray-400 hover:text-foody-primary transition-colors duration-200">
+                    <a href="mailto:fodyyy1@gmail.com" className="text-gray-400 hover:text-foody-primary transition-colors duration-200">
                       Help Center
                     </a>
                   </li>
                   <li>
-                    <a href="tel:+911234567890" className="text-gray-400 hover:text-foody-primary transition-colors duration-200">
+                    <a href="tel:+919989671246" className="text-gray-400 hover:text-foody-primary transition-colors duration-200">
                       Call Support
                     </a>
                   </li>
