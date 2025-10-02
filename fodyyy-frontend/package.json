@@ -20,6 +20,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "axios": "^1.10.0",
+    "framer-motion": "^12.23.22",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

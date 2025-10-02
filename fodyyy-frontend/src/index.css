@@ -371,6 +371,42 @@ h1,h2,h3,h4 { font-weight: 700; }
   background-clip: text;
 }
 
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Button gradient with glow */
+.btn-gradient {
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Neumorphism card effect */
+.neumorphic {
+  background: #FFF8F0;
+  box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.1), -8px -8px 16px rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+}
+
+.neumorphic:hover {
+  box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.15), -12px -12px 24px rgba(255, 255, 255, 1);
+}
+
 /* Navigation animations */
 @keyframes slide-down {
   from {
