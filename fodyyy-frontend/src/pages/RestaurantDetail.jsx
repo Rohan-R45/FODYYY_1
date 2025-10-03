@@ -9,6 +9,25 @@ import { RestaurantRouteGuard } from '../components/RouteGuard';
 import toast from 'react-hot-toast';
 import Cart from '../components/Cart';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  Heart, 
+  Info, 
+  Star, 
+  Clock, 
+  MapPin, 
+  Phone, 
+  Utensils, 
+  Leaf, 
+  Sparkles, 
+  ShoppingCart,
+  Plus,
+  Minus,
+  ChefHat,
+  Filter,
+  X
+} from 'lucide-react';
 
 const RestaurantDetailContent = () => {
   const { id } = useParams();
@@ -20,6 +39,7 @@ const RestaurantDetailContent = () => {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCart, setShowCart] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const categories = [
     { id: 'all', name: 'All Items', icon: '🍽️' },
@@ -35,6 +55,18 @@ const RestaurantDetailContent = () => {
       loadRestaurantData();
     }
   }, [id]);
+
+  // Block body scroll when filter modal is open
+  useEffect(() => {
+    if (showFilterModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showFilterModal]);
 
   const loadRestaurantData = async () => {
     try {
@@ -138,7 +170,7 @@ const RestaurantDetailContent = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -147,22 +179,33 @@ const RestaurantDetailContent = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Restaurant Not Found</h2>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white rounded-3xl shadow-xl border-2 border-orange-100 p-8 text-center"
+        >
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className="w-20 h-20 bg-gradient-to-br from-red-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <Info className="w-10 h-10 text-red-600" />
+          </motion.div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+            Restaurant Not Found
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button 
+          <motion.button 
             onClick={() => navigate('/restaurants')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
           >
             Browse Restaurants
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     );
   }
@@ -170,74 +213,133 @@ const RestaurantDetailContent = () => {
   // No restaurant data
   if (!restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 7h10M7 11h10M7 15h10" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Restaurant Not Available</h2>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white rounded-3xl shadow-xl border-2 border-orange-100 p-8 text-center"
+        >
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className="w-20 h-20 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <ChefHat className="w-10 h-10 text-orange-600" />
+          </motion.div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+            Restaurant Not Available
+          </h2>
           <p className="text-gray-600 mb-6">This restaurant is currently not available.</p>
-          <button 
+          <motion.button 
             onClick={() => navigate('/restaurants')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
           >
             Browse Other Restaurants
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-
-
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
       {/* Banner + Info */}
-      <div className="bg-white">
+      <div className="bg-white shadow-md">
         <div className="max-w-3xl mx-auto">
           <div className="relative">
-            <div className="w-full h-44 md:h-60 bg-gray-200">
+            {/* Hero Image */}
+            <div className="w-full h-44 md:h-60 bg-gradient-to-br from-orange-100 to-yellow-100">
               {restaurant.image ? (
                 <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full grid place-items-center text-gray-400">No image</div>
+                <div className="w-full h-full grid place-items-center">
+                  <Utensils className="w-16 h-16 text-orange-300" />
+                </div>
               )}
             </div>
-            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/50 to-transparent text-white">
-              <h1 className="text-xl font-bold drop-shadow">{restaurant.name}</h1>
-            </div>
-          </div>
 
-          <div className="px-4 py-4">
-            <p className="text-gray-600 text-sm mb-3">{restaurant.description}</p>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white text-xs font-medium">Open</span>
-              {restaurant.phone && <span>{restaurant.phone}</span>}
-              {restaurant.address && <span className="truncate">{restaurant.address}</span>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Chips */}
-      <div className="bg-white border-y">
-        <div className="max-w-3xl mx-auto px-4 py-3 overflow-x-auto no-scrollbar">
-          <div className="flex gap-2">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-3 h-9 rounded-full text-sm whitespace-nowrap ${selectedCategory === category.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}
+            {/* Overlay Gradient */}
+            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl font-bold text-white drop-shadow-lg"
               >
-                {category.name}
-              </button>
-            ))}
-            <button className="px-3 h-9 rounded-full text-sm bg-gray-100 text-gray-800">Veg</button>
-            <button className="px-3 h-9 rounded-full text-sm bg-gray-100 text-gray-800">Non-Veg</button>
-            <button className="px-3 h-9 rounded-full text-sm bg-gray-100 text-gray-800">Egg</button>
+                {restaurant.name}
+              </motion.h1>
+            </div>
+
+            {/* Back Button */}
+            <motion.button
+              onClick={() => navigate(-1)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </motion.button>
+
+            {/* Favorite Button */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all"
+            >
+              <Heart className="w-5 h-5 text-orange-500" />
+            </motion.button>
           </div>
+
+          {/* Restaurant Info */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="px-4 py-4"
+          >
+            <p className="text-gray-600 text-sm mb-3">{restaurant.description}</p>
+            
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              {/* Open Status Badge */}
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold shadow-md"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Open
+              </motion.span>
+
+              {/* Phone */}
+              {restaurant.phone && (
+                <motion.span 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="inline-flex items-center gap-1.5 text-gray-700"
+                >
+                  <Phone className="w-4 h-4 text-orange-500" />
+                  {restaurant.phone}
+                </motion.span>
+              )}
+
+              {/* Address */}
+              {restaurant.address && (
+                <motion.span 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="inline-flex items-center gap-1.5 text-gray-700 truncate"
+                >
+                  <MapPin className="w-4 h-4 text-orange-500 shrink-0" />
+                  <span className="truncate">{restaurant.address}</span>
+                </motion.span>
+              )}
+            </div>
+          </motion.div>
         </div>
       </div>
 
@@ -245,83 +347,376 @@ const RestaurantDetailContent = () => {
       <div className="max-w-3xl mx-auto px-4 py-6">
         {filteredMenuItems.length > 0 ? (
           <div className="space-y-4">
-            {filteredMenuItems.map((item) => {
+            {filteredMenuItems.map((item, index) => {
               const qty = getCartItemQuantity(item._id);
               return (
-                <div key={item._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-3">
+                <motion.div 
+                  key={item._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  className="bg-white rounded-3xl shadow-md border-2 border-orange-100 hover:border-orange-300 hover:shadow-lg p-4 flex gap-3 transition-all"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-[15px] font-semibold text-gray-900 truncate">{item.name}</h3>
-                        <div className="text-xs text-emerald-700 mt-1">Highly reordered</div>
+                        <h3 className="text-[15px] font-semibold text-gray-900 truncate flex items-center gap-1.5">
+                          {item.isVeg && <Leaf className="w-4 h-4 text-green-600 shrink-0" />}
+                          {item.name}
+                        </h3>
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                          className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-100 to-yellow-100 border border-orange-200"
+                        >
+                          <Sparkles className="w-3 h-3 text-orange-600" />
+                          <span className="text-xs font-medium text-orange-700">Highly reordered</span>
+                        </motion.div>
                       </div>
                     </div>
-                    <div className="mt-2 text-[15px] font-bold text-gray-900">₹{Number(item.price).toFixed(0)}</div>
+                    <div className="mt-2 text-[15px] font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
+                      ₹{Number(item.price).toFixed(0)}
+                    </div>
                     {item.description && (
                       <p className="mt-1 text-gray-600 text-sm line-clamp-2">{item.description}</p>
                     )}
                     {item.isAvailable === false && (
-                      <div className="text-xs text-red-600 mt-2">Currently unavailable</div>
+                      <div className="text-xs text-red-600 mt-2 font-medium">Currently unavailable</div>
                     )}
                   </div>
 
                   <div className="w-28 shrink-0">
-                    <div className="relative w-28 h-24 rounded-xl overflow-hidden bg-gray-100">
+                    <div className="relative w-28 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-100">
                       {item.image ? (
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full grid place-items-center text-gray-400 text-xs">No Image</div>
+                        <div className="w-full h-full grid place-items-center">
+                          <Utensils className="w-8 h-8 text-orange-300" />
+                        </div>
                       )}
                     </div>
                     <div className="mt-2 flex justify-end">
-                      {item.isAvailable ? (
+                      {item.isAvailable !== false ? (
                         qty > 0 ? (
-                          <div className="flex items-center bg-white rounded-lg border border-gray-200 overflow-hidden">
-                            <button onClick={() => getCartItemQuantity(item._id) > 1 ? updateQuantity(item._id, qty - 1) : updateQuantity(item._id, 0)} className="w-8 h-8 grid place-items-center text-rose-600 font-bold">−</button>
-                            <span className="w-8 text-center font-semibold">{qty}</span>
-                            <button onClick={() => updateQuantity(item._id, qty + 1)} className="w-8 h-8 grid place-items-center text-rose-600 font-bold">+</button>
-                          </div>
+                          <motion.div 
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            className="flex items-center bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg overflow-hidden shadow-md"
+                          >
+                            <motion.button 
+                              onClick={() => getCartItemQuantity(item._id) > 1 ? updateQuantity(item._id, qty - 1) : updateQuantity(item._id, 0)} 
+                              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.2)' }}
+                              whileTap={{ scale: 0.9 }}
+                              className="w-8 h-8 grid place-items-center text-white font-bold"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </motion.button>
+                            <span className="w-8 text-center font-bold text-white">{qty}</span>
+                            <motion.button 
+                              onClick={() => updateQuantity(item._id, qty + 1)} 
+                              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.2)' }}
+                              whileTap={{ scale: 0.9 }}
+                              className="w-8 h-8 grid place-items-center text-white font-bold"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </motion.button>
+                          </motion.div>
                         ) : (
-                          <button onClick={() => handleAddToCart(item)} className="px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold shadow-sm active:scale-95">ADD</button>
+                          <motion.button 
+                            onClick={() => handleAddToCart(item)} 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold shadow-md hover:shadow-lg transition-all"
+                          >
+                            ADD
+                          </motion.button>
                         )
                       ) : (
-                        <span className="text-xs text-red-600">Not Available</span>
+                        <span className="text-xs text-red-600 font-medium">Not Available</span>
                       )}
                     </div>
-                    <div className="text-[11px] text-gray-500 mt-1 text-right">customisable</div>
+                    <div className="text-[11px] text-orange-600 mt-1 text-right font-medium flex items-center justify-end gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      customisable
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-600">No Menu Items</div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.2 }}
+              className="w-20 h-20 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <ChefHat className="w-10 h-10 text-orange-600" />
+            </motion.div>
+            <h3 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+              No Menu Items
+            </h3>
+            <p className="text-gray-600">Try selecting a different category</p>
+          </motion.div>
         )}
       </div>
+
+      {/* Floating Checkout Button - Shows when cart has items (Mobile Only) */}
+      <AnimatePresence>
+        {cartItems.length > 0 && (
+          <motion.button
+            onClick={() => navigate('/cart')}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            whileTap={{ scale: 0.98 }}
+            className="fixed bottom-[60px] left-0 right-0 z-45 bg-gradient-to-r from-[#FF6B35] to-[#FFC857] shadow-lg px-4 py-3 flex items-center justify-between md:hidden"
+          >
+            <div className="flex items-center gap-3">
+              <motion.div
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="bg-white/20 backdrop-blur-sm rounded-full p-2"
+              >
+                <ShoppingCart className="w-5 h-5 text-white" />
+              </motion.div>
+              <div className="text-left">
+                <div className="text-xs text-white/90 font-medium">
+                  {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
+                </div>
+                <div className="text-lg font-bold text-white">
+                  ₹{getCartTotal().toFixed(0)}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-white font-semibold text-sm">
+              <span>View Cart</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Filter Button */}
+      <motion.button
+        onClick={() => setShowFilterModal(true)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", delay: 0.5 }}
+        whileHover={{ 
+          scale: 1.1,
+          boxShadow: "0 0 25px rgba(255, 107, 53, 0.5)"
+        }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-[140px] right-6 sm:bottom-20 sm:right-8 z-40 bg-white/80 backdrop-blur-lg border-2 border-[#FF6B35] shadow-lg rounded-full p-4 group"
+      >
+        <div className="relative">
+          <Filter className="w-6 h-6 text-[#FF6B35]" />
+          {selectedCategory !== 'all' && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-[#FF6B35] to-[#FFC857] rounded-full border-2 border-white"
+            />
+          )}
+        </div>
+      </motion.button>
+
+      {/* Filter Modal/Popover */}
+      <AnimatePresence>
+        {showFilterModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFilterModal(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-50 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-[#FF6B35] p-6 max-h-[80vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B35] to-[#FFC857] rounded-full flex items-center justify-center">
+                    <Filter className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#FFC857] bg-clip-text text-transparent">
+                    Filter Menu
+                  </h2>
+                </div>
+                <motion.button
+                  onClick={() => setShowFilterModal(false)}
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </motion.button>
+              </div>
+
+              {/* Categories Section */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Categories
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {categories.map((category, index) => (
+                    <motion.button
+                      key={category.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setSelectedCategory(category.id);
+                        setShowFilterModal(false);
+                      }}
+                      className={`relative px-4 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${
+                        selectedCategory === category.id
+                          ? 'bg-gradient-to-r from-[#FF6B35] to-[#FFC857] text-white border-[#FF6B35] shadow-lg'
+                          : 'bg-white text-gray-700 border-orange-200 hover:border-[#FF6B35] hover:bg-orange-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-xl">{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                      {selectedCategory === category.id && (
+                        <motion.div
+                          layoutId="activeFilter"
+                          className="absolute inset-0 bg-gradient-to-r from-[#FF6B35] to-[#FFC857] rounded-2xl -z-10"
+                          transition={{ type: "spring", damping: 20 }}
+                        />
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dietary Preferences Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Dietary Preferences
+                </h3>
+                <div className="space-y-2">
+                  <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-white text-gray-700 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Leaf className="w-5 h-5 text-green-600" />
+                    <span>Vegetarian Only</span>
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.35 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-white text-gray-700 border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="text-xl">🔴</span>
+                    <span>Non-Vegetarian</span>
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-white text-gray-700 border-2 border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="text-xl">🥚</span>
+                    <span>Contains Egg</span>
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Clear Filter Button */}
+              {selectedCategory !== 'all' && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setSelectedCategory('all');
+                    setShowFilterModal(false);
+                  }}
+                  className="w-full mt-6 px-6 py-3 rounded-full text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
+                >
+                  Clear All Filters
+                </motion.button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Cart Sidebar */}
       {showCart && (
         <Cart isOpen={showCart} onClose={() => setShowCart(false)} />
       )}
 
-      {/* Sticky bottom bar when items in cart */}
-      {cartItems.length > 0 && (
-        <div className="fixed inset-x-0 bottom-[64px] sm:bottom-0 bg-white border-t border-gray-200 p-3 z-50 mobile-safe-area">
-          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs text-gray-500">Total</div>
-              <div className="text-lg font-semibold">₹{getCartTotal().toFixed(0)}</div>
+      {/* Sticky bottom bar when items in cart - Hidden on mobile, shown on desktop */}
+      <AnimatePresence>
+        {cartItems.length > 0 && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="hidden sm:fixed sm:inset-x-0 sm:bottom-0 bg-gradient-to-r from-orange-500 to-yellow-500 border-t-4 border-orange-600 p-3 z-50 shadow-2xl"
+          >
+            <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                >
+                  <ShoppingCart className="w-6 h-6 text-white" />
+                </motion.div>
+                <div>
+                  <div className="text-xs text-white/90 font-medium">{cartItems.length} items</div>
+                  <div className="text-lg font-bold text-white">₹{getCartTotal().toFixed(0)}</div>
+                </div>
+              </div>
+              <motion.button
+                onClick={() => navigate('/checkout')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 max-w-xs bg-white text-orange-600 py-3 px-6 rounded-full font-bold shadow-lg hover:shadow-xl transition-all"
+              >
+                View Cart & Checkout →
+              </motion.button>
             </div>
-            <button
-              onClick={() => navigate('/checkout')}
-              className="flex-1 bg-orange-600 text-white py-3 rounded-xl font-semibold shadow-sm active:scale-95"
-            >
-              View Cart & Checkout
-            </button>
-          </div>
-        </div>
-      )}
-      {cartItems.length > 0 && <div className="h-[112px] sm:h-0" />}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

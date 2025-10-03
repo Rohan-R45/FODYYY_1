@@ -8,18 +8,25 @@ import RestaurantSetup from '../components/RestaurantSetup';
 import ImageInput from '../components/ImageInput';
 import ImageDisplay from '../components/ImageDisplay';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  EyeIcon, 
-  EyeSlashIcon,
-  PhotoIcon,
-  XMarkIcon,
-  CheckIcon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon
-} from '@heroicons/react/24/outline';
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Eye, 
+  EyeOff,
+  Image as ImageIcon,
+  X,
+  Check,
+  AlertTriangle,
+  Search,
+  ChefHat,
+  Utensils,
+  Coffee,
+  Cake,
+  Filter,
+  Leaf
+} from 'lucide-react';
 
 const MenuManagement = () => {
   const navigate = useNavigate();
@@ -420,112 +427,171 @@ const MenuManagement = () => {
 
   // Loading spinner component
   const LoadingSpinner = () => (
-    <div className="flex justify-center items-center py-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div className="flex justify-center items-center py-12">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full"
+      />
     </div>
   );
 
   // Empty state component
   const EmptyState = () => (
-    <div className="text-center py-12">
-      <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-      <h3 className="mt-2 text-sm font-medium text-gray-900">No menu items</h3>
-      <p className="mt-1 text-sm text-gray-500">
-        Get started by creating your first menu item.
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="text-center py-16 bg-white rounded-3xl shadow-xl border-2 border-orange-100"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+        className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-orange-100 to-yellow-100 mb-6"
+      >
+        <ChefHat className="w-10 h-10 text-orange-500" />
+      </motion.div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-2">No menu items yet</h3>
+      <p className="text-gray-600 mb-8 max-w-md mx-auto">
+        Get started by creating your first delicious menu item and showcase your culinary offerings!
       </p>
-      <div className="mt-6">
-        <button
-          onClick={handleAddItem}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-          Add Menu Item
-        </button>
-      </div>
-    </div>
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleAddItem}
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-400 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
+      >
+        <Plus className="w-5 h-5" />
+        Add Your First Menu Item
+      </motion.button>
+    </motion.div>
   );
 
   // Delete confirmation modal
   const DeleteConfirmModal = ({ item, onConfirm, onCancel }) => (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3 text-center">
-          <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-600" />
-          <h3 className="text-lg font-medium text-gray-900 mt-2">Delete Menu Item</h3>
-          <div className="mt-2 px-7 py-3">
-            <p className="text-sm text-gray-500">
-              Are you sure you want to delete "{item.name}"? This action cannot be undone.
-            </p>
-          </div>
-          <div className="flex justify-center space-x-4 mt-4">
-            <button
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border-2 border-red-100 p-8"
+      >
+        <div className="text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4"
+          >
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </motion.div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Menu Item?</h3>
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to delete <span className="font-semibold text-gray-900">"{item.name}"</span>? This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onCancel}
-              className="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-full hover:bg-gray-200 transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onConfirm(item._id)}
-              className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-full hover:shadow-lg transition-all"
             >
               Delete
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Menu Management
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage your restaurant's menu items
-          </p>
-        </div>
-        <div className="mt-4 flex md:mt-0 md:ml-4">
-          <button
-            onClick={handleAddItem}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-            Add Menu Item
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
+      {/* Premium Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-orange-500 to-yellow-400 rounded-b-[3rem] shadow-2xl mb-8"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-3">
+                <motion.div
+                  whileHover={{ rotate: 360 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center"
+                >
+                  <ChefHat className="w-8 h-8 text-white" />
+                </motion.div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white">Menu Management</h1>
+                  <p className="text-white/90 text-lg mt-1">
+                    Craft and manage your culinary masterpieces
+                  </p>
+                </div>
+              </div>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleAddItem}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              Add Menu Item
+            </motion.button>
           </div>
+        </div>
+      </motion.div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+      {/* Premium Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8 flex flex-col sm:flex-row gap-4"
+      >
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400" />
           <input
             type="text"
-            placeholder="Search menu items..."
+            placeholder="Search your delicious menu items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-orange-200 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
           />
         </div>
-        <div>
+        <div className="relative">
+          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400 pointer-events-none" />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="pl-12 pr-8 py-3 bg-white border-2 border-orange-200 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none cursor-pointer font-medium text-gray-700 min-w-[200px]"
           >
-            <option value="all">All Categories</option>
+            <option value="all">🍽️ All Categories</option>
             {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category} value={category}>
+                {category === 'Breakfast' ? '🌅' : 
+                 category === 'Lunch' ? '🍱' :
+                 category === 'Dinner' ? '🍽️' :
+                 category === 'Snacks' ? '🍿' :
+                 category === 'Beverages' ? '☕' : '🍰'} {category}
+              </option>
             ))}
           </select>
         </div>
-      </div>
+      </motion.div>
 
       {/* Content */}
       {isLoading ? (
@@ -539,300 +605,379 @@ const MenuManagement = () => {
           <EmptyState />
         )
       ) : (
-        /* Menu Items Grid */
+        /* Premium Menu Items Grid */
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map((item) => (
-            <div key={item._id} className="bg-white overflow-hidden shadow rounded-lg">
+          {filteredItems.map((item, index) => (
+            <motion.div
+              key={item._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white overflow-hidden rounded-3xl shadow-xl border-2 border-orange-100 hover:border-orange-300 transition-all"
+            >
               {/* Item Image */}
-              <div className="h-48 relative">
+              <div className="h-48 relative overflow-hidden">
                 <ImageDisplay
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full"
+                  className="w-full h-full object-cover"
                   fallbackClassName="w-full h-full"
                   iconSize="h-12 w-12"
                 />
                 
                 {/* Availability Badge */}
-                <div className="absolute top-2 right-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                <div className="absolute top-3 right-3">
+                  <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
                     item.isAvailable 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
+                      ? 'bg-green-500/90 text-white' 
+                      : 'bg-red-500/90 text-white'
                   }`}>
-                    {item.isAvailable ? 'Available' : 'Unavailable'}
+                    {item.isAvailable ? (
+                      <>
+                        <Eye className="w-3 h-3" />
+                        Available
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="w-3 h-3" />
+                        Unavailable
+                      </>
+                    )}
                   </span>
                 </div>
+
+                {/* Vegetarian Badge */}
+                {item.isVegetarian && (
+                  <div className="absolute top-3 left-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-500/90 text-white backdrop-blur-sm">
+                      <Leaf className="w-3 h-3" />
+                      Veg
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Item Details */}
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900 truncate">
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 flex-1 line-clamp-1">
                     {item.name}
                   </h3>
-                  <p className="text-lg font-bold text-green-600">
+                  <p className="text-xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent ml-2">
                     {formatCurrency(item.price)}
                   </p>
                 </div>
                 
-                <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                <p className="text-sm text-gray-600 line-clamp-2 mb-3">
                   {item.description}
                 </p>
                 
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <div className="mb-4">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                    <Utensils className="w-3 h-3" />
                     {item.category}
                   </span>
-                  
-                  {item.isVegetarian && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Vegetarian
-                    </span>
-                  )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="mt-4 flex justify-between">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEditItem(item)}
-                      className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    
-                    <button
-                      onClick={() => setDeleteConfirm(item)}
-                      className="inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="flex gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleEditItem(item)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-100 text-orange-700 font-semibold rounded-full hover:bg-orange-200 transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                  </motion.button>
                   
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setDeleteConfirm(item)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-100 text-red-700 font-semibold rounded-full hover:bg-red-200 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => handleToggleAvailability(item._id, item.isAvailable)}
-                    className={`inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    className={`px-4 py-2.5 font-semibold rounded-full transition-colors ${
                       item.isAvailable
-                        ? 'text-red-700 bg-red-100 hover:bg-red-200 focus:ring-red-500'
-                        : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'
+                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
                     }`}
                   >
                     {item.isAvailable ? (
-                      <>
-                        <EyeSlashIcon className="h-4 w-4 mr-1" />
-                        Disable
-                      </>
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <>
-                        <EyeIcon className="h-4 w-4 mr-1" />
-                        Enable
-                      </>
+                      <Eye className="w-4 h-4" />
                     )}
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
 
-      {/* Add/Edit Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  resetForm();
-                  setEditingItem(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
+      {/* Premium Add/Edit Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border-2 border-orange-100"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-orange-500 to-yellow-400 rounded-t-3xl px-8 py-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <ChefHat className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">
+                      {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
+                    </h3>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetForm();
+                      setEditingItem(null);
+                    }}
+                    className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </motion.button>
+                </div>
+              </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Name *
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Item Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    formErrors.name ? 'border-red-300' : 'border-gray-300'
+                  className={`block w-full px-4 py-3 border-2 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all ${
+                    formErrors.name ? 'border-red-300 bg-red-50' : 'border-orange-200 focus:border-orange-500'
                   }`}
-                  placeholder="Enter item name"
+                  placeholder="e.g., Margherita Pizza"
                 />
                 {formErrors.name && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    {formErrors.name}
+                  </p>
                 )}
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Description *
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   rows={3}
-                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    formErrors.description ? 'border-red-300' : 'border-gray-300'
+                  className={`block w-full px-4 py-3 border-2 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all resize-none ${
+                    formErrors.description ? 'border-red-300 bg-red-50' : 'border-orange-200 focus:border-orange-500'
                   }`}
-                  placeholder="Enter item description"
+                  placeholder="Describe your delicious dish..."
                 />
                 {formErrors.description && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.description}</p>
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    {formErrors.description}
+                  </p>
                 )}
               </div>
 
-              {/* Price */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Price ($) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => handleInputChange('price', e.target.value)}
-                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    formErrors.price ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="0.00"
-                />
-                {formErrors.price && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.price}</p>
-                )}
-              </div>
+              {/* Price and Category Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Price */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Price ($) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange('price', e.target.value)}
+                    className={`block w-full px-4 py-3 border-2 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all ${
+                      formErrors.price ? 'border-red-300 bg-red-50' : 'border-orange-200 focus:border-orange-500'
+                    }`}
+                    placeholder="0.00"
+                  />
+                  {formErrors.price && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      {formErrors.price}
+                    </p>
+                  )}
+                </div>
 
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    formErrors.category ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-                {formErrors.category && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.category}</p>
-                )}
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => handleInputChange('category', e.target.value)}
+                    className={`block w-full px-4 py-3 border-2 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer ${
+                      formErrors.category ? 'border-red-300 bg-red-50' : 'border-orange-200 focus:border-orange-500'
+                    }`}
+                  >
+                    {categories.map(category => (
+                      <option key={category} value={category}>
+                        {category === 'Breakfast' ? '🌅' : 
+                         category === 'Lunch' ? '🍱' :
+                         category === 'Dinner' ? '🍽️' :
+                         category === 'Snacks' ? '🍿' :
+                         category === 'Beverages' ? '☕' : '🍰'} {category}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.category && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      {formErrors.category}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Image */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Menu Item Image
                 </label>
-                <ImageInput
-                  value={formData.image}
-                  onChange={(value) => handleInputChange('image', value)}
-                  placeholder="Enter menu item image URL"
-                  previewSize="w-24 h-24"
-                  uploadText="Upload"
-                  urlText="URL"
-                  supportedFormats="PNG, JPG, JPEG, WebP"
-                  maxSize="5MB"
-                  showPreview={true}
-                  error={formErrors.image}
-                />
+                <div className="border-2 border-orange-200 rounded-2xl p-4 bg-orange-50/30">
+                  <ImageInput
+                    value={formData.image}
+                    onChange={(value) => handleInputChange('image', value)}
+                    placeholder="Enter menu item image URL"
+                    previewSize="w-24 h-24"
+                    uploadText="Upload"
+                    urlText="URL"
+                    supportedFormats="PNG, JPG, JPEG, WebP"
+                    maxSize="5MB"
+                    showPreview={true}
+                    error={formErrors.image}
+                  />
+                </div>
                 {formErrors.image && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.image}</p>
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    {formErrors.image}
+                  </p>
                 )}
               </div>
 
               {/* Checkboxes */}
-              <div className="space-y-2">
-                <div className="flex items-center">
+              <div className="flex gap-4">
+                <label className="flex items-center gap-3 px-4 py-3 bg-green-50 border-2 border-green-200 rounded-2xl cursor-pointer hover:bg-green-100 transition-colors flex-1">
                   <input
                     type="checkbox"
                     id="isVegetarian"
                     checked={formData.isVegetarian}
                     onChange={(e) => handleInputChange('isVegetarian', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="w-5 h-5 text-green-600 focus:ring-2 focus:ring-green-500 border-green-300 rounded"
                   />
-                  <label htmlFor="isVegetarian" className="ml-2 block text-sm text-gray-900">
-                    Vegetarian
-                  </label>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Leaf className="w-5 h-5 text-green-600" />
+                    <span className="font-semibold text-gray-700">Vegetarian</span>
+                  </div>
+                </label>
                 
-                <div className="flex items-center">
+                <label className="flex items-center gap-3 px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-2xl cursor-pointer hover:bg-blue-100 transition-colors flex-1">
                   <input
                     type="checkbox"
                     id="isAvailable"
                     checked={formData.isAvailable}
                     onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="w-5 h-5 text-blue-600 focus:ring-2 focus:ring-blue-500 border-blue-300 rounded"
                   />
-                  <label htmlFor="isAvailable" className="ml-2 block text-sm text-gray-900">
-                    Available
-                  </label>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-gray-700">Available</span>
+                  </div>
+                </label>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
+              <div className="flex gap-3 pt-6 border-t-2 border-orange-100">
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setShowAddModal(false);
                     resetForm();
                     setEditingItem(null);
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-full hover:bg-gray-200 transition-colors"
                 >
                   Cancel
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                  whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-400 text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      />
                       {editingItem ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
                     <>
-                      <CheckIcon className="h-4 w-4 mr-2" />
+                      <Check className="w-5 h-5" />
                       {editingItem ? 'Update Item' : 'Create Item'}
                     </>
                   )}
-                </button>
+                </motion.button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <DeleteConfirmModal
-          item={deleteConfirm}
-          onConfirm={handleDeleteItem}
-          onCancel={() => setDeleteConfirm(null)}
-        />
-      )}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <DeleteConfirmModal
+            item={deleteConfirm}
+            onConfirm={handleDeleteItem}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        )}
+      </AnimatePresence>
+      
+      </div>
     </div>
   );
 };

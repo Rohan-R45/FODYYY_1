@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import restaurantService from '../services/restaurantService';
 import { createSafeLinkProps } from '../utils/navigation';
 import { isValidId } from '../utils/validation';
 import toast from 'react-hot-toast';
 import OptimizedImage from '../components/OptimizedImage';
+import { Search, Star, Clock, TrendingUp, Zap, Tag, X } from 'lucide-react';
 
 const RestaurantList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,45 +29,8 @@ const RestaurantList = () => {
     hasPrevPage: false
   });
 
-  // Modal state for filter popup
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [tempFilters, setTempFilters] = useState({ ...filters });
-  const [tempSortBy, setTempSortBy] = useState(sortBy);
-  const [tempSortOrder, setTempSortOrder] = useState(sortOrder);
-
-  const openFilter = () => {
-    setTempFilters({ ...filters });
-    setTempSortBy(sortBy);
-    setTempSortOrder(sortOrder);
-    setIsFilterOpen(true);
-  };
-
-  const closeFilter = () => setIsFilterOpen(false);
-
-  const applyFilters = () => {
-    setFilters({ ...tempFilters });
-    setSortBy(tempSortBy);
-    setSortOrder(tempSortOrder);
-    updateSearchParams({
-      ...tempFilters,
-      sortBy: tempSortBy,
-      sortOrder: tempSortOrder
-    });
-    setIsFilterOpen(false);
-  };
-
-  const resetFilters = () => {
-    const defaults = { cuisine: '', rating: '', deliveryTime: '', priceRange: '' };
-    setTempFilters(defaults);
-    setTempSortBy('rating');
-    setTempSortOrder('desc');
-    setFilters(defaults);
-    setSortBy('rating');
-    setSortOrder('desc');
-    setSearchQuery('');
-    setSearchParams({});
-    setIsFilterOpen(false);
-  };
+  // Quick filter state
+  const [activeQuickFilter, setActiveQuickFilter] = useState('all');
 
   const cuisineTypes = [
     'North Indian', 'South Indian', 'Chinese', 'Italian', 'Continental',
@@ -184,7 +149,26 @@ const RestaurantList = () => {
       priceRange: ''
     });
     setSearchQuery('');
+    setActiveQuickFilter('all');
     setSearchParams({});
+  };
+
+  const handleQuickFilter = (filterType) => {
+    setActiveQuickFilter(filterType);
+    
+    if (filterType === 'all') {
+      clearFilters();
+    } else if (filterType === 'fast') {
+      handleFilterChange('deliveryTime', '30');
+    } else if (filterType === 'topRated') {
+      handleFilterChange('rating', '4.5');
+    } else if (filterType === 'veg') {
+      // This would need backend support
+      toast.info('Veg filter coming soon!');
+    } else if (filterType === 'offers') {
+      // This would need backend support
+      toast.info('Offers filter coming soon!');
+    }
   };
 
   const getActiveFiltersCount = () => {
@@ -192,441 +176,284 @@ const RestaurantList = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start justify-between gap-3 w-full md:w-auto">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Restaurants</h1>
-                <p className="text-gray-600 mt-1">
-                  {pagination.totalItems > 0 
-                    ? `${pagination.totalItems} restaurant${pagination.totalItems !== 1 ? 's' : ''} available`
-                    : `${restaurants.length} restaurant${restaurants.length !== 1 ? 's' : ''} available`
-                  }
-                </p>
-              </div>
-              {/* Floating/round filter button */}
-              <button
-                type="button"
-                onClick={openFilter}
-                aria-label="Open filters"
-                className="shrink-0 md:hidden inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#FF6B35] text-white shadow-[0_6px_18px_rgba(255,107,53,0.35)] active:scale-[0.98]"
-              >
-                {/* Filter icon */}
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M6 12h12M10 19h4" />
-                </svg>
-              </button>
-            </div>
-            
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] via-orange-50 to-[#FFC857]">
+      {/* Hero Section with Search */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-orange-500 to-yellow-400 rounded-b-[3rem] shadow-2xl"
+      >
+        <div className="container mx-auto px-4 py-12 md:py-16">
+          <div className="max-w-3xl mx-auto">
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-3xl md:text-4xl font-bold text-white text-center mb-8"
+            >
+              Discover Amazing Restaurants 🍽️
+            </motion.h1>
+
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md relative">
-              <div className="relative">
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              onSubmit={handleSearch}
+              className="relative"
+            >
+              <div className="relative bg-white rounded-full shadow-2xl overflow-hidden">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search restaurants, cuisines..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-12"
+                  placeholder="Search restaurants, cuisines, or dishes..."
+                  className="w-full pl-16 pr-32 py-5 text-lg focus:outline-none"
                 />
-                {/* Desktop filter round button near search */}
-                <button
-                  type="button"
-                  onClick={openFilter}
-                  aria-label="Open filters"
-                  className="hidden md:inline-flex absolute right-10 top-1/2 -translate-y-1/2 items-center justify-center w-9 h-9 rounded-full bg-[#FF6B35] text-white shadow"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M6 12h12M10 19h4" />
-                  </svg>
-                </button>
                 <button
                   type="submit"
-                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  Search
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      </div>
+            </motion.form>
 
-      {/* Filters Modal */}
-      {isFilterOpen && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center"
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Backdrop */}
-          <button
-            onClick={closeFilter}
-            aria-label="Close filters"
-            className="absolute inset-0 bg-black/40"
-          />
-          {/* Modal content */}
-          <div className="relative w-[92vw] max-w-md bg-white rounded-2xl shadow-xl border border-orange-100 p-4 animate-fade-in-up">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">Filter Results</h3>
-              <button onClick={closeFilter} aria-label="Close" className="p-2 rounded-full hover:bg-gray-100">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-              {/* Sort By */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
-                <select
-                  value={tempSortBy}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const opt = sortOptions.find(o => o.value === value);
-                    setTempSortBy(value);
-                    setTempSortOrder(opt?.order || 'desc');
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            {/* Filter Pills */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-wrap justify-center gap-3 mt-6"
+            >
+              {[
+                { id: 'all', label: 'All', icon: null },
+                { id: 'fast', label: 'Fast Delivery', icon: <Zap className="w-4 h-4" /> },
+                { id: 'topRated', label: 'Top Rated', icon: <Star className="w-4 h-4" /> },
+                { id: 'veg', label: 'Veg', icon: null },
+                { id: 'offers', label: 'Offers', icon: <Tag className="w-4 h-4" /> }
+              ].map((filter, index) => (
+                <motion.button
+                  key={filter.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 + index * 0.05 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleQuickFilter(filter.id)}
+                  className={`px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 transition-all duration-300 ${
+                    activeQuickFilter === filter.id
+                      ? 'bg-gradient-to-r from-orange-500 to-yellow-400 text-white shadow-lg'
+                      : 'bg-orange-50 text-orange-600 hover:bg-white'
+                  }`}
                 >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {filter.icon}
+                  {filter.label}
+                </motion.button>
+              ))}
+            </motion.div>
 
-              {/* Cuisine */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
-                <select
-                  value={tempFilters.cuisine}
-                  onChange={(e) => setTempFilters({ ...tempFilters, cuisine: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">All Cuisines</option>
-                  {cuisineTypes.map((cuisine) => (
-                    <option key={cuisine} value={cuisine}>
-                      {cuisine}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Rating */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Rating</label>
-                <select
-                  value={tempFilters.rating}
-                  onChange={(e) => setTempFilters({ ...tempFilters, rating: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Rating</option>
-                  {ratingOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Delivery Time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time</label>
-                <select
-                  value={tempFilters.deliveryTime}
-                  onChange={(e) => setTempFilters({ ...tempFilters, deliveryTime: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Time</option>
-                  {deliveryTimeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Price Range */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
-                <select
-                  value={tempFilters.priceRange}
-                  onChange={(e) => setTempFilters({ ...tempFilters, priceRange: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Price</option>
-                  {priceRangeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+            {/* Active Filters Display */}
+            {getActiveFiltersCount() > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 flex items-center justify-center gap-2 flex-wrap"
               >
-                Reset
-              </button>
-              <button
-                onClick={applyFilters}
-                className="px-4 py-2 rounded-lg bg-[#FF6B35] text-white font-semibold shadow-[0_6px_18px_rgba(255,107,53,0.35)] active:scale-[0.99]"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Modal Triggered via buttons above; remove static sidebar on mobile */}
-          <div className="lg:w-64 flex-shrink-0 hidden lg:block">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-                {getActiveFiltersCount() > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    Clear all ({getActiveFiltersCount()})
-                  </button>
+                <span className="text-white text-sm font-medium">Active filters:</span>
+                {searchQuery && (
+                  <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                    Search: {searchQuery}
+                    <button onClick={() => setSearchQuery('')} className="hover:bg-white/20 rounded-full p-0.5">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
                 )}
-              </div>
-
-              {/* Sort By */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sort By
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => handleSortChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Cuisine Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cuisine Type
-                </label>
-                <select
-                  value={filters.cuisine}
-                  onChange={(e) => handleFilterChange('cuisine', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">All Cuisines</option>
-                  {cuisineTypes.map((cuisine) => (
-                    <option key={cuisine} value={cuisine}>
-                      {cuisine}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Rating Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Rating
-                </label>
-                <select
-                  value={filters.rating}
-                  onChange={(e) => handleFilterChange('rating', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Rating</option>
-                  {ratingOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Delivery Time Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Time
-                </label>
-                <select
-                  value={filters.deliveryTime}
-                  onChange={(e) => handleFilterChange('deliveryTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Time</option>
-                  {deliveryTimeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Price Range Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price Range
-                </label>
-                <select
-                  value={filters.priceRange}
-                  onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Any Price</option>
-                  {priceRangeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Restaurant Grid */}
-          <div className="flex-1">
-            {isLoading ? (
-              <div className="grid-responsive-3">
-                {[...Array(6)].map((_, index) => (
-                  <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="w-full h-48 skeleton"></div>
-                    <div className="p-4">
-                      <div className="h-4 skeleton rounded mb-2"></div>
-                      <div className="h-3 skeleton rounded mb-3 w-3/4"></div>
-                      <div className="flex justify-between">
-                        <div className="h-3 skeleton rounded w-1/4"></div>
-                        <div className="h-3 skeleton rounded w-1/4"></div>
-                      </div>
-                    </div>
-                  </div>
+                {Object.entries(filters).map(([key, value]) => value && (
+                  <span key={key} className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                    {key}: {value}
+                    <button onClick={() => handleFilterChange(key, '')} className="hover:bg-white/20 rounded-full p-0.5">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
                 ))}
-              </div>
-            ) : restaurants.length > 0 ? (
-              <div className="grid-responsive-3 animate-fade-in">
-                {restaurants.map((restaurant, index) => {
-                  const linkProps = createSafeLinkProps.restaurant(restaurant._id);
-                  
-                  return (
-                    <Link
-                      key={restaurant._id}
-                      {...linkProps}
-                      className="bg-white rounded-xl shadow-sm hover-lift hover-glow transition-all duration-300 overflow-hidden group border border-gray-100 animate-slide-up"
-                      style={{ animationDelay: `${index * 0.05}s` }}
-                    >
-                    <div className="relative">
-                      {restaurant.image ? (
-                        <OptimizedImage
-                          src={restaurant.image}
-                          alt={restaurant.name}
-                          width={16}
-                          height={9}
-                          className="w-full h-48"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                          <svg className="w-12 h-12 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
-                          </svg>
-                        </div>
-                      ) }
-                      <div className="absolute top-3 right-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          restaurant.isActive 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {restaurant.isActive ? 'Open' : 'Closed'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4">
-                      <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
-                        {restaurant.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {restaurant.description || restaurant.cuisine?.join(', ') || 'Delicious food awaits!'}
-                      </p>
-                      
-                      <div className="flex items-center justify-between text-sm mb-3">
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="text-gray-700 font-medium">
-                            {restaurant.rating?.toFixed(1) || 'New'}
-                          </span>
-                          {restaurant.reviewCount && (
-                            <span className="text-gray-500 ml-1">
-                              ({restaurant.reviewCount})
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-gray-500">
-                          {restaurant.deliveryTime || '30-45 min'}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">
-                          {restaurant.priceRange || '₹₹'}
-                        </span>
-                        <div className="flex items-center text-primary-600 group-hover:text-primary-700">
-                          <span className="text-sm font-medium">View Menu</span>
-                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No restaurants found</h3>
-                <p className="text-gray-600 mb-4">
-                  {getActiveFiltersCount() > 0 
-                    ? 'Try adjusting your filters to see more results.'
-                    : 'No restaurants are available at the moment.'
-                  }
-                </p>
-                {getActiveFiltersCount() > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
+                <button
+                  onClick={clearFilters}
+                  className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-semibold hover:bg-white/30 transition-colors"
+                >
+                  Clear All
+                </button>
+              </motion.div>
             )}
           </div>
         </div>
+      </motion.div>
+
+      {/* Restaurant Cards */}
+      <div className="container mx-auto px-4 py-12">
+        {/* Results Count */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8 text-center"
+        >
+          <p className="text-gray-700 text-lg">
+            {pagination.totalItems > 0 
+              ? `Found ${pagination.totalItems} amazing restaurant${pagination.totalItems !== 1 ? 's' : ''}`
+              : `${restaurants.length} restaurant${restaurants.length !== 1 ? 's' : ''} available`
+            }
+          </p>
+        </motion.div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="bg-white rounded-3xl shadow-xl overflow-hidden">
+                <div className="w-full h-64 bg-gray-200 animate-pulse"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : restaurants.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {restaurants.map((restaurant, index) => {
+              const linkProps = createSafeLinkProps.restaurant(restaurant._id);
+              
+              return (
+                <motion.div
+                  key={restaurant._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="group"
+                >
+                  <Link {...linkProps}>
+                    <div className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 h-full">
+                      {/* Restaurant Image */}
+                      <div className="relative h-64 overflow-hidden">
+                        {restaurant.image ? (
+                          <img
+                            src={restaurant.image}
+                            alt={restaurant.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center">
+                            <svg className="w-20 h-20 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
+                            </svg>
+                          </div>
+                        )}
+                        
+                        {/* Overlay Badges */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        
+                        {/* Status Badge */}
+                        <div className="absolute top-4 left-4">
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm ${
+                            restaurant.isActive 
+                              ? 'bg-green-500/90 text-white' 
+                              : 'bg-red-500/90 text-white'
+                          }`}>
+                            {restaurant.isActive ? '🚀 Fast' : 'Closed'}
+                          </span>
+                        </div>
+
+                        {/* Offer Badge (if applicable) */}
+                        {restaurant.hasOffer && (
+                          <div className="absolute top-4 right-4">
+                            <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-yellow-400 text-gray-900 backdrop-blur-sm">
+                              🎉 OFFER
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Rating Badge */}
+                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
+                          <Star className="w-4 h-4 text-orange-500 fill-orange-500" />
+                          <span className="font-bold text-gray-900">
+                            {restaurant.rating?.toFixed(1) || 'New'}
+                          </span>
+                        </div>
+
+                        {/* Hover CTA */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          whileHover={{ opacity: 1, y: 0 }}
+                          className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        >
+                          <span className="bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                            View Menu →
+                          </span>
+                        </motion.div>
+                      </div>
+                      
+                      {/* Restaurant Info */}
+                      <div className="p-6">
+                        <h3 className="font-bold text-2xl text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
+                          {restaurant.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {restaurant.cuisine?.join(', ') || restaurant.description || 'Delicious food awaits!'}
+                        </p>
+                        
+                        {/* Meta Info */}
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Clock className="w-4 h-4 text-orange-500" />
+                            <span className="font-medium">{restaurant.deliveryTime || '30-40'} min</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <TrendingUp className="w-4 h-4 text-green-500" />
+                            <span className="font-medium">{restaurant.priceRange || '₹₹'}</span>
+                          </div>
+                        </div>
+
+                        {/* Delivery Fee */}
+                        {restaurant.deliverySettings?.freeDeliveryAbove && (
+                          <div className="mt-3 text-xs text-green-600 font-medium">
+                            Free delivery on orders above ₹{restaurant.deliverySettings.freeDeliveryAbove}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16 bg-white/90 backdrop-blur-sm rounded-3xl border-2 border-orange-200"
+          >
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No restaurants found</h3>
+            <p className="text-gray-600 mb-6">
+              {getActiveFiltersCount() > 0 
+                ? 'Try adjusting your filters to see more results.'
+                : 'No restaurants are available at the moment.'
+              }
+            </p>
+            {getActiveFiltersCount() > 0 && (
+              <button
+                onClick={clearFilters}
+                className="bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+              >
+                Clear Filters
+              </button>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
