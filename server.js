@@ -54,23 +54,18 @@ try {
 }
 
 // --- CORS (env-driven) ---
-const allowedOrigins = (config.ALLOWED_ORIGINS || [])
-  .concat(config.FRONTEND_URL ? [config.FRONTEND_URL] : [])
-  .filter(Boolean);
+const allowedOrigins = [
+  'https://foodyi.me',
+  'https://www.foodyi.me',
+  'https://fodyyy.netlify.app',
+];
 
 logger.info('CORS allowed origins configured', { allowedOrigins });
 
 app.use(
   cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true); // allow non-browser clients
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error('Not allowed by CORS'));
-    },
+    origin: allowedOrigins,
     credentials: true,
-    optionsSuccessStatus: 200,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-auth-token'],
   })
 );
 

@@ -24,10 +24,17 @@ const config = {
   JWT_EXPIRE: process.env.JWT_EXPIRE || '30d',
 
   // CORS
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5174',
+  FRONTEND_URL: process.env.FRONTEND_URL || 'https://foodyi.me',
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
-    : ['http://localhost:3000', 'http://localhost:5174', 'http://localhost:5175'],
+    : [
+        'https://foodyi.me',
+        'https://www.foodyi.me',
+        'https://fodyyy.netlify.app',
+        'http://localhost:3000',
+        'http://localhost:5174',
+        'http://localhost:5175',
+      ],
 
   // Security
   BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12,
