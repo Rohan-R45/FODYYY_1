@@ -94,6 +94,9 @@ const Register = () => {
     roomNumber: '',
     restaurantName: '',
     restaurantAddress: '',
+    restaurantDescription: '',
+    cuisineTypes: [],
+    registrationCode: '',
     acceptTerms: false,
   });
 
@@ -124,6 +127,24 @@ const Register = () => {
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleCuisineToggle = (cuisine) => {
+    setFormData(prev => {
+      const cuisineTypes = prev.cuisineTypes.includes(cuisine)
+        ? prev.cuisineTypes.filter(c => c !== cuisine)
+        : [...prev.cuisineTypes, cuisine];
+      return { ...prev, cuisineTypes };
+    });
+
+    // Clear error when user selects a cuisine
+    if (errors.cuisineTypes) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.cuisineTypes;
         return newErrors;
       });
     }
@@ -175,6 +196,17 @@ const Register = () => {
       if (!formData.restaurantAddress.trim()) {
         newErrors.restaurantAddress = 'Restaurant address is required';
       }
+      if (!formData.restaurantDescription.trim()) {
+        newErrors.restaurantDescription = 'Restaurant description is required';
+      } else if (formData.restaurantDescription.trim().length < 20) {
+        newErrors.restaurantDescription = 'Description must be at least 20 characters';
+      }
+      if (!formData.cuisineTypes || formData.cuisineTypes.length === 0) {
+        newErrors.cuisineTypes = 'Please select at least one cuisine type';
+      }
+      if (!formData.registrationCode.trim()) {
+        newErrors.registrationCode = 'Registration code is required';
+      }
     }
 
     if (!formData.acceptTerms) {
@@ -201,11 +233,14 @@ const Register = () => {
     };
 
     if (formData.role === 'student') {
-      registrationData.hostelAddress = formData.hostelAddress.trim();
+      registrationData.address = formData.hostelAddress.trim();
       registrationData.roomNumber = formData.roomNumber.trim();
     } else {
       registrationData.restaurantName = formData.restaurantName.trim();
-      registrationData.restaurantAddress = formData.restaurantAddress.trim();
+      registrationData.address = formData.restaurantAddress.trim();
+      registrationData.description = formData.restaurantDescription.trim();
+      registrationData.cuisineTypes = formData.cuisineTypes;
+      registrationData.registrationCode = formData.registrationCode.trim();
     }
 
     try {
@@ -561,6 +596,105 @@ const Register = () => {
                         {errors.restaurantAddress}
                       </motion.p>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Restaurant Description
+                    </label>
+                    <textarea
+                      name="restaurantDescription"
+                      value={formData.restaurantDescription}
+                      onChange={handleChange}
+                      placeholder="Describe your restaurant (minimum 20 characters)"
+                      rows={3}
+                      className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none resize-none ${
+                        errors.restaurantDescription
+                          ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                          : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100'
+                      }`}
+                      disabled={isLoading}
+                    />
+                    {errors.restaurantDescription && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-500 mt-1 font-medium"
+                      >
+                        {errors.restaurantDescription}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cuisine Types
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        'North Indian', 'South Indian', 'Chinese', 'Italian',
+                        'Fast Food', 'Beverages', 'Desserts', 'Continental'
+                      ].map((cuisine) => (
+                        <motion.button
+                          key={cuisine}
+                          type="button"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleCuisineToggle(cuisine)}
+                          className={`px-4 py-2.5 rounded-xl border-2 transition-all duration-300 text-sm font-medium ${
+                            formData.cuisineTypes.includes(cuisine)
+                              ? 'border-orange-500 bg-orange-50 text-orange-700'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
+                          }`}
+                          disabled={isLoading}
+                        >
+                          {cuisine}
+                        </motion.button>
+                      ))}
+                    </div>
+                    {errors.cuisineTypes && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-500 mt-1 font-medium"
+                      >
+                        {errors.cuisineTypes}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Registration Code
+                    </label>
+                    <div className="relative">
+                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        name="registrationCode"
+                        value={formData.registrationCode}
+                        onChange={handleChange}
+                        placeholder="Enter restaurant registration code"
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                          errors.registrationCode
+                            ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                            : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100'
+                        }`}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    {errors.registrationCode && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-500 mt-1 font-medium"
+                      >
+                        {errors.registrationCode}
+                      </motion.p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Contact support if you don't have a registration code
+                    </p>
                   </div>
                 </motion.div>
               )}

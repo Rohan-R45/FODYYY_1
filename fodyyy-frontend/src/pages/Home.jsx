@@ -492,7 +492,7 @@ const Home = () => {
               />
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mt-6">
-              Top-rated restaurants loved by students
+              Some of them are coming soon!
             </p>
           </motion.div>
 
@@ -575,7 +575,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🎓</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={100} suffix="+" />
+                <AnimatedCounter end={50} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Happy Students</div>
             </motion.div>
@@ -589,7 +589,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🍽️</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={200} suffix="+" />
+                <AnimatedCounter end={20} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Orders Delivered</div>
             </motion.div>
