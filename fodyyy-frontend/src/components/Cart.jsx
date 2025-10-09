@@ -25,11 +25,10 @@ const Cart = ({ restaurantId }) => {
     : cartItems;
 
   const subtotal = relevantItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const gst = subtotal * 0.05; // 5% GST
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
   
   // Delivery fee is determined by the restaurant's delivery settings; fallback values are used if unavailable
-  const [deliverySettings, setDeliverySettings] = React.useState({ charge: 30, freeAbove: 300 });
+  const [deliverySettings, setDeliverySettings] = React.useState({ charge: 15, freeAbove: 300 });
 
   React.useEffect(() => {
     const fetchDeliverySettings = async () => {
@@ -40,21 +39,21 @@ const Cart = ({ restaurantId }) => {
         if (resp?.success && resp?.data?.restaurant) {
           const ds = resp.data.restaurant.deliverySettings || {};
           setDeliverySettings({
-            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30,
+            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15,
             freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
           });
         } else {
-          setDeliverySettings({ charge: 30, freeAbove: 300 });
+          setDeliverySettings({ charge: 15, freeAbove: 300 });
         }
       } catch {
-        setDeliverySettings({ charge: 30, freeAbove: 300 });
+        setDeliverySettings({ charge: 15, freeAbove: 300 });
       }
     };
     fetchDeliverySettings();
   }, [restaurantId, relevantItems.length]);
 
-  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300) ? 0 : (subtotal > 0 ? (deliverySettings.charge || 30) : 0);
-  const total = subtotal + deliveryFee + gst - discount;
+  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300) ? 0 : (subtotal > 0 ? (deliverySettings.charge || 15) : 0);
+  const total = subtotal + deliveryFee - discount;
 
   const handleApplyCoupon = () => {
     if (couponCode.toLowerCase() === 'save10') {
@@ -282,12 +281,6 @@ const Cart = ({ restaurantId }) => {
             <span className={`font-medium ${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
               {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
             </span>
-          </div>
-
-          {/* GST */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">GST (5%)</span>
-            <span className="text-gray-900 font-medium">{formatCurrency(gst)}</span>
           </div>
 
           {/* Discount */}

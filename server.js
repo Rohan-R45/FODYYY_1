@@ -54,17 +54,21 @@ try {
 }
 
 // --- CORS (env-driven) ---
-const allowedOrigins = [
-  'https://foodyi.me',
-  'https://www.foodyi.me',
-  'https://fodyyy.netlify.app',
-];
+const allowedOrigins = Array.isArray(config.ALLOWED_ORIGINS)
+  ? config.ALLOWED_ORIGINS
+  : ['https://foodyi.me', 'https://www.foodyi.me'];
 
 logger.info('CORS allowed origins configured', { allowedOrigins });
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      logger.warn('Blocked by CORS policy', { origin });
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );

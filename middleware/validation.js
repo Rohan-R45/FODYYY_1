@@ -349,13 +349,27 @@ const commonValidationRules = {
 
 // Sanitization middleware
 const sanitizeInput = (req, res, next) => {
-  const sanitizeObject = (obj) => {
+  // Fields that should not be HTML-escaped (URLs, base64 images, etc.)
+  const skipFields = ['image', 'logo', 'url', 'imageUrl', 'logoUrl', 'avatar'];
+  
+  const sanitizeObject = (obj, parentKey = '') => {
     for (const key in obj) {
       if (typeof obj[key] === 'string') {
-        // Remove potential XSS attacks
-        obj[key] = validator.escape(obj[key].trim());
+        // Skip sanitization for URL fields and base64 images
+        const shouldSkip = skipFields.includes(key) || 
+                          obj[key].startsWith('data:image/') ||
+                          obj[key].startsWith('http://') ||
+                          obj[key].startsWith('https://');
+        
+        if (!shouldSkip) {
+          // Remove potential XSS attacks
+          obj[key] = validator.escape(obj[key].trim());
+        } else {
+          // Just trim whitespace for URLs
+          obj[key] = obj[key].trim();
+        }
       } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-        sanitizeObject(obj[key]);
+        sanitizeObject(obj[key], key);
       }
     }
   };

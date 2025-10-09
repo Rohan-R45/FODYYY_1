@@ -38,8 +38,21 @@ const ImageInput = ({
   // Validate image URL format
   const isValidImageUrl = (url) => {
     if (!isValidUrl(url)) return false;
+    
+    // Check for common image hosting services
+    const imageHosts = [
+      'cloudinary', 'imgur', 'unsplash', 'pexels', 'pixabay', 
+      'flickr', 'photobucket', 'imagekit', 'cloudflare', 'amazonaws'
+    ];
+    
+    // Check if URL is from a known image hosting service
+    if (imageHosts.some(host => url.toLowerCase().includes(host))) {
+      return true;
+    }
+    
+    // Check for image file extensions
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i;
-    return imageExtensions.test(url) || url.includes('cloudinary') || url.includes('imgur') || url.includes('unsplash');
+    return imageExtensions.test(url);
   };
 
   const handleUrlChange = (e) => {

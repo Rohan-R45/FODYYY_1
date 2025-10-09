@@ -45,8 +45,23 @@ const restaurantSchema = new mongoose.Schema({
     validate: {
       validator: function(v) {
         if (!v) return true; // Allow empty string
-        // Basic URL validation
-        return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(v);
+        
+        // Check if it's a valid URL
+        try {
+          const url = new URL(v);
+          if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            return false;
+          }
+        } catch (e) {
+          return false;
+        }
+        
+        // Check for common image hosting services or file extensions
+        const imageHosts = ['cloudinary', 'imgur', 'unsplash', 'pexels', 'pixabay', 'flickr', 'imagekit', 'cloudflare', 'amazonaws'];
+        const hasImageHost = imageHosts.some(host => v.toLowerCase().includes(host));
+        const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i.test(v);
+        
+        return hasImageHost || hasImageExtension;
       },
       message: 'Please provide a valid image URL'
     }

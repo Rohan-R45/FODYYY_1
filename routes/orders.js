@@ -735,9 +735,9 @@ router.post('/',
       const subtotal = calculateOrderTotal(orderItems);
 
       // Determine delivery fee using restaurant settings when available, else use defaults
-      // Defaults: charge = 30, freeAbove = 300 (matches frontend fallback)
+      // Defaults: charge = 15, freeAbove = 300 (matches frontend fallback)
       const ds = (restaurant && restaurant.deliverySettings) ? restaurant.deliverySettings : {};
-      const deliveryCharge = typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30;
+      const deliveryCharge = typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15;
       const freeAbove = typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300;
       const deliveryFee = subtotal > 0 && subtotal >= freeAbove ? 0 : (subtotal > 0 ? deliveryCharge : 0);
 

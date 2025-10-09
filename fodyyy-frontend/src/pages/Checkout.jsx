@@ -53,8 +53,8 @@ const Checkout = () => {
 
   const cartRestaurant = getCartRestaurant();
   const subtotal = getCartTotal();
-  // Delivery fee: fetch from restaurant settings via restaurant details, fallback to 30 if unavailable
-  const [deliverySettings, setDeliverySettings] = useState({ charge: 30, freeAbove: 300 });
+  // Delivery fee: fetch from restaurant settings via restaurant details, fallback to 15 if unavailable
+  const [deliverySettings, setDeliverySettings] = useState({ charge: 15, freeAbove: 300 });
 
   useEffect(() => {
     // Load latest delivery settings from the restaurant endpoint on mount and whenever cart changes restaurant
@@ -65,14 +65,14 @@ const Checkout = () => {
         if (resp?.success && resp?.data?.restaurant) {
           const ds = resp.data.restaurant.deliverySettings || {};
           setDeliverySettings({
-            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 30,
+            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15,
             freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
           });
         } else {
-          setDeliverySettings({ charge: 30, freeAbove: 300 });
+          setDeliverySettings({ charge: 15, freeAbove: 300 });
         }
       } catch (e) {
-        setDeliverySettings({ charge: 30, freeAbove: 300 });
+        setDeliverySettings({ charge: 15, freeAbove: 300 });
       }
     };
 
@@ -81,7 +81,7 @@ const Checkout = () => {
 
   const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300)
     ? 0
-    : (deliverySettings.charge || 30);
+    : (deliverySettings.charge || 15);
   const total = subtotal + deliveryFee;
 
   const handleAddressChange = (field, value) => {

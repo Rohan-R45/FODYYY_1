@@ -191,8 +191,21 @@ const MenuManagement = () => {
 
       const isValidImageUrl = (url) => {
         if (!isValidUrl(url)) return false;
+        
+        // Check for common image hosting services
+        const imageHosts = [
+          'cloudinary', 'imgur', 'unsplash', 'pexels', 'pixabay', 
+          'flickr', 'photobucket', 'imagekit', 'cloudflare', 'amazonaws'
+        ];
+        
+        // Check if URL is from a known image hosting service
+        if (imageHosts.some(host => url.toLowerCase().includes(host))) {
+          return true;
+        }
+        
+        // Check for image file extensions
         const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i;
-        return imageExtensions.test(url) || url.includes('cloudinary') || url.includes('imgur') || url.includes('unsplash');
+        return imageExtensions.test(url);
       };
 
       if (!isValidImageUrl(formData.image.trim())) {
@@ -234,6 +247,14 @@ const MenuManagement = () => {
     setFormErrors({});
   };
 
+  // Helper function to decode HTML entities
+  const decodeHtmlEntities = (text) => {
+    if (!text) return '';
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
   // Handle add new item
   const handleAddItem = () => {
     resetForm();
@@ -248,7 +269,7 @@ const MenuManagement = () => {
       description: item.description || '',
       price: item.price?.toString() || '',
       category: item.category || 'Snacks',
-      image: item.image || '',
+      image: decodeHtmlEntities(item.image) || '',
       isVegetarian: Boolean(item.isVegetarian),
       isAvailable: Boolean(item.isAvailable)
     });
