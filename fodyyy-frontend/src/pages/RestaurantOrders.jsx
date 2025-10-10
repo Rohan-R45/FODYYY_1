@@ -248,6 +248,17 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
     return icons[status] || '📋';
   };
 
+  const formatAddress = (student) => {
+    if (!student) return 'No delivery address provided';
+    if (student.address?.hostel && student.address?.room) {
+      return `${student.address.hostel}, Room ${student.address.room}`;
+    }
+    if (student.address?.hostel) {
+      return student.address.hostel;
+    }
+    return student.address?.fullAddress || student.address?.line1 || 'No delivery address provided';
+  };
+
   const getUrgencyLevel = () => {
     const orderTime = new Date(order.createdAt);
     const now = new Date();
@@ -273,18 +284,18 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
 
   return (
     <>
-      <div className={`bg-white rounded-lg shadow-md border-l-4 p-6 ${
+      <div className={`bg-white rounded-xl shadow-md border-l-4 p-5 sm:p-6 space-y-5 ${
         urgency === 'high' ? 'border-red-500' : 
         urgency === 'medium' ? 'border-yellow-500' : 'border-green-500'
       }`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 whitespace-nowrap">
               Order #{order.orderNumber}
             </h3>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status)}`}>
-              <span className="mr-2">{getStatusIcon(order.status)}</span>
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium border ${getStatusColor(order.status)}`}>
+              <span className="mr-1 sm:mr-2">{getStatusIcon(order.status)}</span>
               {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
             </div>
             {urgency === 'high' && (
@@ -293,8 +304,8 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
               </span>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-lg font-bold text-green-600">
+          <div className="text-left sm:text-right">
+            <p className="text-lg sm:text-xl font-bold text-green-600">
               {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.totalAmount || order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
             </p>
             <p className="text-sm text-gray-500">
@@ -304,56 +315,93 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
         </div>
 
         {/* Customer Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Customer Details</h4>
-            <div className="space-y-1">
-              <p className="text-sm">
-                <span className="font-medium">Name:</span> {order.student.name}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-gray-900">Customer Details</h4>
+            <div className="space-y-1 text-sm text-gray-700">
+              <p className="flex flex-wrap gap-1">
+                <span className="font-medium">Name:</span>
+                <span>{order.student?.name || order.customer?.name}</span>
               </p>
-              <p className="text-sm">
-                <span className="font-medium">Phone:</span> 
-                <a href={`tel:${order.student.phone}`} className="text-blue-600 hover:underline ml-1">
-                  {order.student.phone}
-                </a>
+              {(order.student?.phone || order.customer?.phone) && (
+                <p className="flex flex-wrap gap-1 items-center">
+                  <span className="font-medium">Phone:</span>
+                  <a
+                    href={`tel:${order.student?.phone || order.customer?.phone}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {order.student?.phone || order.customer?.phone}
+                  </a>
+                </p>
+              )}
+              <p className="flex flex-col gap-1">
+                <span className="font-medium">Delivery:</span>
+                <span className="text-gray-600 text-sm leading-snug">
+                  {formatAddress(order.student || order.customer)}
+                </span>
               </p>
             </div>
           </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Order Info</h4>
-            <div className="space-y-1">
-              <p className="text-sm">
-                <span className="font-medium">Items:</span> {order.totalItems} items
+          <div className="space-y-3">
+            <h4 className="font-semibold text-gray-900">Order Info</h4>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>
+                <span className="font-medium">Items:</span> {order.totalItems} item{order.totalItems !== 1 ? 's' : ''}
               </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Payment:</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">Payment:</span>
                 <PaymentStatusBadge 
                   paymentStatus={order.paymentStatus}
                   isVerified={!!order.paymentDetails?.verifiedAt}
                   size="sm"
                 />
               </div>
+              {order.scheduledFor && (
+                <p className="flex flex-wrap gap-1">
+                  <span className="font-medium">Scheduled:</span>
+                  <span>{formatDateTime(order.scheduledFor)}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Order Items */}
-        <div className="mb-4">
-          <h4 className="font-semibold text-gray-900 mb-2">Items Ordered</h4>
-          <div className="bg-gray-50 rounded-lg p-3">
+        <div className="space-y-3">
+          <h4 className="font-semibold text-gray-900">Items Ordered</h4>
+          <div className="bg-gray-50 rounded-lg p-3 space-y-3">
             <div className="space-y-2">
               {order.items?.map((item, index) => (
-                <div key={index} className="flex justify-between items-center text-sm">
-                  <span>
-                    {item.menuItem?.name || item.name} × {item.quantity}
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(item.price * item.quantity)}
+                <div key={index} className="flex flex-wrap items-start justify-between gap-2 text-sm">
+                  <div className="flex-1 min-w-[160px]">
+                    <p className="font-medium text-gray-900">{item.menuItem?.name || item.name}</p>
+                    <p className="text-gray-600 text-xs">
+                      {item.quantity} × {formatCurrency(item.price)}
+                    </p>
+                    {item.customization && (
+                      <p className="text-xs text-gray-500 mt-1 space-y-0.5">
+                        {item.customization.size && (
+                          <span>Size: {item.customization.size}</span>
+                        )}
+                        {item.customization.addons?.length && (
+                          <span>
+                            Add-ons: {item.customization.addons.map(a => a.name).join(', ')}
+                          </span>
+                        )}
+                        {item.customization.instructions && (
+                          <span>Notes: {item.customization.instructions}</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-semibold text-gray-900 whitespace-nowrap">
+                    {formatCurrency((item.price || 0) * (item.quantity || 1))}
                   </span>
                 </div>
-              )) || (
+              ))}
+              {!order.items?.length && (
                 <p className="text-sm text-gray-500">
-                  {order.itemsCount} items - {formatCurrency(order.totalAmount)}
+                  {order.itemsCount} items - {formatCurrency(order.totalAmount || 0)}
                 </p>
               )}
             </div>
@@ -361,11 +409,15 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
         </div>
 
         {/* Estimated Delivery Time */}
-        {order.estimatedDeliveryTime && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <span className="font-medium">Estimated Delivery:</span> 
-              {formatDateTime(order.estimatedDeliveryTime)}
+        {(order.estimatedDeliveryTime || order.estimatedDeliveryWindow) && (
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 flex flex-col sm:flex-row sm:items-center sm:gap-1">
+              <span className="font-medium">Estimated Delivery:</span>
+              <span>
+                {order.estimatedDeliveryWindow
+                  ? `${formatDateTime(order.estimatedDeliveryWindow.start)} - ${formatDateTime(order.estimatedDeliveryWindow.end)}`
+                  : formatDateTime(order.estimatedDeliveryTime)}
+              </span>
             </p>
           </div>
         )}
@@ -412,7 +464,7 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
           </button>
 
           <a
-            href={`tel:${order.student.phone}`}
+            href={`tel:${order.student?.phone || order.customer?.phone || ''}`}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
           >
             <span className="mr-2">📞</span>
@@ -600,31 +652,32 @@ const RestaurantOrders = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
+        <div className="container mx-auto px-4 py-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start sm:items-center gap-3">
               <button
                 onClick={() => navigate('/restaurant')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Back to dashboard"
               >
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-900">Restaurant Orders</h1>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Restaurant Orders</h1>
                   {newOrdersCount > 0 && (
                     <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
                       {newOrdersCount} new
                     </span>
                   )}
-                  <div className="flex items-center text-green-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                    <span className="text-sm">Live updates</span>
+                  <div className="flex items-center text-green-600 text-xs sm:text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1 sm:mr-2"></div>
+                    <span>Live updates</span>
                   </div>
                 </div>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 text-sm sm:text-base mt-1">
                   {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} found
                 </p>
               </div>
@@ -632,12 +685,12 @@ const RestaurantOrders = () => {
             
             <button
               onClick={() => loadOrders()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              <span className="text-sm font-semibold">Refresh</span>
             </button>
           </div>
         </div>
@@ -645,7 +698,7 @@ const RestaurantOrders = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
           {statusOptions.map((status) => {
             const count = status.value === 'all' ? orders.length : (stats[status.value] || 0);
             return (
@@ -655,15 +708,20 @@ const RestaurantOrders = () => {
                   setSelectedStatus(status.value);
                   if (status.value === 'pending') setNewOrdersCount(0);
                 }}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`p-4 sm:p-5 rounded-xl border-2 transition-all text-left ${
                   selectedStatus === status.value
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-blue-500 bg-blue-50 shadow-md'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <div className="text-2xl mb-2">{status.icon}</div>
-                <div className="text-2xl font-bold text-gray-900">{count}</div>
-                <div className="text-sm text-gray-600">{status.label}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl sm:text-3xl">{status.icon}</span>
+                  {selectedStatus === status.value && (
+                    <span className="text-xs font-semibold text-blue-600">Active</span>
+                  )}
+                </div>
+                <div className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900">{count}</div>
+                <div className="text-sm text-gray-600 mt-1">{status.label}</div>
               </button>
             );
           })}
@@ -671,7 +729,7 @@ const RestaurantOrders = () => {
 
         {/* Orders List */}
         {filteredOrders.length > 0 ? (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
             {filteredOrders.map((order) => (
               <OrderDetailsCard
                 key={order._id}

@@ -18,6 +18,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Disable browser's automatic scroll restoration
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

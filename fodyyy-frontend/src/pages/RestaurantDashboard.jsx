@@ -294,7 +294,7 @@ const RestaurantDashboard = () => {
               </div>
 
               {dashboardData.recentOrders.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 sm:space-y-5">
                   {dashboardData.recentOrders.map((order, index) => (
                     <motion.div
                       key={order._id}
@@ -302,42 +302,44 @@ const RestaurantDashboard = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.6 + index * 0.1 }}
                     >
-                      <GlassCard hover className="p-6">
-                        <div className="flex items-start justify-between flex-wrap gap-4">
+                      <GlassCard hover className="p-5 sm:p-6">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
                           <div className="flex items-start gap-4 flex-1 min-w-0">
-                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center flex-shrink-0">
-                              <ShoppingBag className="w-7 h-7 text-white" />
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center flex-shrink-0">
+                              <ShoppingBag className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-bold text-gray-900">
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                                <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate">
                                   Order #{order.orderNumber}
                                 </h3>
                                 <StatusBadge status={order.status} size="sm" animated />
                               </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                                <User className="w-4 h-4" />
-                                <span>{order.customer?.name}</span>
-                                <span>•</span>
+                              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                <span className="inline-flex items-center gap-1">
+                                  <User className="w-4 h-4" />
+                                  {order.customer?.name}
+                                </span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>{getRelativeTime(order.createdAt)}</span>
                               </div>
                               <p className="text-sm text-gray-600">
-                                {(order.itemsCount ?? order.items?.length ?? 0)} item{((order.itemsCount ?? order.items?.length ?? 0) !== 1) ? 's' : ''} • 
+                                {(order.itemsCount ?? order.items?.length ?? 0)} item{((order.itemsCount ?? order.items?.length ?? 0) !== 1) ? 's' : ''} •
                                 {order.paymentMethod === 'upi' ? ' UPI' : ' Cash on Delivery'}
                               </p>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-3">
-                            <p className="text-2xl font-bold text-gray-900">
+                          <div className="flex md:flex-col md:items-end gap-3 w-full md:w-auto">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900 md:text-right">
                               {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.totalAmount || order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
                             </p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-1 md:flex-none items-center justify-end md:justify-start gap-2">
                               {canUpdateStatus(order.status) && order._id && (
                                 <motion.button
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
                                   onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                                  className="text-sm bg-gradient-to-r from-orange-600 to-red-500 text-white px-4 py-2 rounded-full hover:shadow-lg transition-all font-semibold"
+                                  className="text-xs sm:text-sm bg-gradient-to-r from-orange-600 to-red-500 text-white px-3 sm:px-4 py-2 rounded-full hover:shadow-lg transition-all font-semibold whitespace-nowrap"
                                 >
                                   Mark as {getNextStatus(order.status)}
                                 </motion.button>
@@ -345,7 +347,7 @@ const RestaurantDashboard = () => {
                               {order._id && (
                                 <Link
                                   to={`/restaurant/orders/${order._id}`}
-                                  className="text-sm text-orange-600 hover:text-orange-700 font-semibold"
+                                  className="text-sm text-orange-600 hover:text-orange-700 font-semibold whitespace-nowrap"
                                 >
                                   Details →
                                 </Link>

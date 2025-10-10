@@ -10,6 +10,7 @@ import BottomNavigation from './components/BottomNavigation';
 import PrivateRoute from './components/PrivateRoute';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
+import ScrollToTop from './components/ScrollToTop';
 
 // Public Pages
 import Home from './pages/Home';
@@ -99,6 +100,7 @@ function App() {
         <RestaurantProvider>
           <CartProvider>
             <Router>
+              <ScrollToTop />
             <div className="App min-h-screen">
               <Navbar />
               

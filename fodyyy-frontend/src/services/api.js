@@ -41,6 +41,21 @@ api.interceptors.response.use(
 
     // Network error (no response): optionally retry idempotent requests
     if (!error.response) {
+      const isLoginAttempt = (originalRequest.url || '').includes('/auth/login');
+      const hitTimeout = error.code === 'ECONNABORTED' || error.message?.toLowerCase?.().includes('timeout');
+
+      if (isLoginAttempt && hitTimeout) {
+        const loginRetryLimit = Number(import.meta.env.VITE_LOGIN_TIMEOUT_RETRIES || 1);
+        const loginRetryDelay = Number(import.meta.env.VITE_LOGIN_RETRY_DELAY_MS || 2000);
+        originalRequest.__retryCount = originalRequest.__retryCount || 0;
+
+        if (originalRequest.__retryCount < loginRetryLimit) {
+          originalRequest.__retryCount += 1;
+          await sleep(loginRetryDelay);
+          return api(originalRequest);
+        }
+      }
+
       if (isIdempotent) {
         originalRequest.__retryCount = originalRequest.__retryCount || 0;
         if (originalRequest.__retryCount < maxRetries) {

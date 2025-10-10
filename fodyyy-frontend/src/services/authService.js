@@ -8,7 +8,7 @@ export const authService = {
       console.log('⏰ Login request starting...');
       
       const response = await api.post('/auth/login', credentials, {
-        timeout: 15000 // 15 seconds timeout for login requests
+        timeout: 30000 // 30 seconds timeout to handle slow first responses
       });
       console.log('✅ Login response received:', response.data);
       
