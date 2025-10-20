@@ -20,7 +20,6 @@ import {
   Phone, 
   Utensils, 
   Leaf, 
-  Sparkles, 
   ShoppingCart,
   Plus,
   Minus,
@@ -365,15 +364,7 @@ const RestaurantDetailContent = () => {
                           {item.isVeg && <Leaf className="w-4 h-4 text-green-600 shrink-0" />}
                           {item.name}
                         </h3>
-                        <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-100 to-yellow-100 border border-orange-200"
-                        >
-                          <Sparkles className="w-3 h-3 text-orange-600" />
-                          <span className="text-xs font-medium text-orange-700">Highly reordered</span>
-                        </motion.div>
+
                       </div>
                     </div>
                     <div className="mt-2 text-[15px] font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
@@ -437,10 +428,7 @@ const RestaurantDetailContent = () => {
                         <span className="text-xs text-red-600 font-medium">Not Available</span>
                       )}
                     </div>
-                    <div className="text-[11px] text-orange-600 mt-1 text-right font-medium flex items-center justify-end gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      customisable
-                    </div>
+
                   </div>
                 </motion.div>
               );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +15,7 @@ const Checkout = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Form state
   const [deliveryAddress, setDeliveryAddress] = useState({
@@ -157,6 +159,7 @@ const Checkout = () => {
         setOrderDetails(response.data);
         setOrderPlaced(true);
         clearCart();
+        setTimeout(() => setShowCelebration(true), 400);
         
         if (paymentMethod === 'upi') {
           setShowPaymentModal(true);
@@ -175,11 +178,15 @@ const Checkout = () => {
   };
 
   if (orderPlaced && orderDetails) {
-    return <OrderConfirmation 
-      orderDetails={orderDetails} 
-      showPaymentModal={showPaymentModal}
-      setShowPaymentModal={setShowPaymentModal}
-    />;
+    return (
+      <OrderConfirmation 
+        orderDetails={orderDetails} 
+        showPaymentModal={showPaymentModal}
+        setShowPaymentModal={setShowPaymentModal}
+        showCelebration={showCelebration}
+        setShowCelebration={setShowCelebration}
+      />
+    );
   }
 
   return (
@@ -461,55 +468,296 @@ const Checkout = () => {
 };
 
 // Order Confirmation Component
-const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal }) => {
+const celebrationVariant = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
+const floatingIcons = [
+  { icon: '🍊', delay: 0 },
+  { icon: '🥤', delay: 0.2 },
+  { icon: '🍟', delay: 0.4 },
+  { icon: '🍔', delay: 0.6 },
+  { icon: '🍕', delay: 0.8 },
+  { icon: '🍩', delay: 1.0 },
+];
+
+const backgroundGradient =
+  'bg-[radial-gradient(circle_at_top,_rgba(255,235,204,0.9),_rgba(255,179,71,0.4),_rgba(255,107,53,0.2))]';
+
+const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal, showCelebration, setShowCelebration }) => {
   const navigate = useNavigate();
+  const restaurantName = orderDetails.restaurant?.name || 'Tasty Tales';
+  const estimatedDeliveryInfo = React.useMemo(() => {
+    const fallbackMinutes = 45;
+    const now = new Date();
+    const calculatedDelivery = new Date(now.getTime() + fallbackMinutes * 60000);
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    const isToday = calculatedDelivery.toDateString() === now.toDateString();
+    const isTomorrow = calculatedDelivery.toDateString() === tomorrow.toDateString();
+
+    const dayLabel = isToday
+      ? 'Today'
+      : isTomorrow
+      ? 'Tomorrow'
+      : calculatedDelivery.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const formattedTime = calculatedDelivery.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const calendarDisplay = `${dayLabel}, ${formattedTime}`;
+    const relativeDisplay = `in ${fallbackMinutes} minutes`;
+
+    return {
+      calendarDisplay,
+      relativeDisplay,
+    };
+  }, [orderDetails?._id]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center animate-scale-in">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
-        <p className="text-gray-600 mb-6">
-          Your order has been confirmed and is being prepared.
-        </p>
-        
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Order ID</span>
-            <span className="text-sm font-mono text-gray-900">#{orderDetails.orderNumber}</span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Total Amount</span>
-            <span className="text-sm font-semibold text-gray-900">{formatCurrency(orderDetails.total)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Estimated Delivery</span>
-            <span className="text-sm text-gray-900">{orderDetails.estimatedDeliveryTime || '30-45 mins'}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <button
-            onClick={() => navigate(`/orders/${orderDetails._id}`)}
-            className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+    <div className={`min-h-screen ${backgroundGradient} flex items-center justify-center px-4 py-8 relative overflow-hidden`}> 
+      {/* Floating ambience icons */}
+      <AnimatePresence>
+        {floatingIcons.map((food, index) => (
+          <motion.span
+            key={`${food.icon}-${index}`}
+            className="absolute text-4xl md:text-5xl text-white/80 drop-shadow-lg"
+            initial={{ opacity: 0, y: 40, rotate: -10 }}
+            animate={{
+              opacity: [0, 1, 1, 0],
+              y: [-20, 0, -40, -80],
+              rotate: [0, -4, 6, 0],
+            }}
+            transition={{
+              repeat: Infinity,
+              duration: 8,
+              delay: food.delay,
+              ease: 'easeInOut',
+            }}
+            style={{ left: `${15 + index * 12}%`, top: `${10 + (index % 3) * 25}%` }}
           >
-            Track Order
-          </button>
-          
-          <button
-            onClick={() => navigate('/restaurants')}
-            className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            {food.icon}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+
+      <motion.div
+        className="relative max-w-4xl w-full"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+          {/* Celebration card */}
+          <motion.div
+            className="relative bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl shadow-2xl p-6 sm:p-8 overflow-hidden"
+            variants={celebrationVariant}
+            initial="hidden"
+            animate="visible"
           >
-            Continue Shopping
-          </button>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFEDD5]/70 via-[#FFD7A8]/60 to-[#FFB347]/40 pointer-events-none" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/40 rounded-full blur-3xl" />
+            <div className="relative flex flex-col h-full">
+              <motion.div
+                className="inline-flex items-center gap-2 bg-white/80 border border-white/70 text-[#FF6B35] font-semibold px-4 py-2 rounded-full self-start shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              >
+                <span className="text-lg">✨</span>
+                Cheers! Order Confirmed
+              </motion.div>
+
+              <motion.h2
+                className="mt-6 text-3xl sm:text-4xl font-extrabold text-[#1B1B1E] tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+              >
+                Your feast is on the way!
+              </motion.h2>
+
+              <motion.p
+                className="mt-4 text-base sm:text-lg text-[#4B5563] leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+              >
+                Tastes of sunshine and comfort will be at your doorstep soon. Stay tuned for deliciousness!
+              </motion.p>
+
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow-md border border-orange-100">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-500 text-white">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6v6l3 3" />
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={1.8} />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Estimated Delivery</p>
+                    <p className="text-lg font-bold text-gray-900">{estimatedDeliveryInfo.calendarDisplay}</p>
+                    <p className="text-sm font-semibold text-orange-600 mt-1">{estimatedDeliveryInfo.relativeDisplay}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow-md border border-orange-100">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#FBBF24] text-[#92400E]">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9l9-6 9 6v10.5A1.5 1.5 0 0119.5 21h-15A1.5 1.5 0 013 19.5V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 21V12h6v9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Restaurant</p>
+                    <p className="text-lg font-bold text-gray-900">{restaurantName}</p>
+                  </div>
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {showCelebration && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4 }}
+                    className="mt-8 p-4 rounded-2xl bg-gradient-to-br from-[#FFE8D6]/80 to-[#FFD7A8]/70 border border-[#FFEDD5]/80 shadow-inner"
+                  >
+                    <p className="text-[#B45309] font-semibold flex items-center gap-2">
+                      <span className="text-xl">🎉</span>
+                      Saved to your favorites! Discover more foodie surprises in the app.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.div
+                className="mt-auto flex flex-col sm:flex-row gap-3 pt-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1, duration: 0.5 }}
+              >
+                <button
+                  onClick={() => navigate(`/orders/${orderDetails._id}`)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF9F1C] to-[#FFD23F] px-6 py-3 text-white font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 transition-all"
+                >
+                  <span>Track Live Journey</span>
+                  <span className="text-lg">→</span>
+                </button>
+
+                <button
+                  onClick={() => navigate('/restaurants')}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-white/90 border border-[#FFE8D6] px-6 py-3 text-[#B45309] font-semibold shadow-sm hover:bg-white transition"
+                >
+                  Continue Exploring
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Order summary card */}
+          <motion.div
+            className="relative bg-white/75 backdrop-blur-xl border border-white/60 rounded-3xl shadow-xl p-6 sm:p-8 flex flex-col"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+          >
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#FFEDD5]/80 rounded-full blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold tracking-widest uppercase text-[#F7941D]">Order #{orderDetails.orderNumber}</p>
+                  <h3 className="text-2xl font-bold text-[#1B1B1E] mt-2">Order Summary</h3>
+                </div>
+                <motion.div
+                  className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#FF9F1C] to-[#FF6B35] flex items-center justify-center text-white text-3xl shadow-lg"
+                  animate={{ rotate: [0, 6, -6, 0] }}
+                  transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
+                >
+                  🛵
+                </motion.div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center justify-between border border-[#FFE8D6] rounded-2xl p-4 bg-white/80 shadow-sm">
+                  <div>
+                    <p className="text-sm text-[#6B7280]">Delivery Address</p>
+                    <p className="text-[#1B1B1E] font-semibold">{orderDetails.deliveryAddress}</p>
+                  </div>
+                  <span className="text-2xl">📍</span>
+                </div>
+
+                <div className="flex items-center justify-between border border-[#FFE8D6] rounded-2xl p-4 bg-white/80 shadow-sm">
+                  <div>
+                    <p className="text-sm text-[#6B7280]">Contact Number</p>
+                    <p className="text-[#1B1B1E] font-semibold">{orderDetails.phone}</p>
+                  </div>
+                  <span className="text-2xl">📞</span>
+                </div>
+
+                <div className="border border-[#FFE8D6] rounded-2xl p-4 bg-white/80 shadow-sm">
+                  <p className="text-sm text-[#6B7280] mb-3">Items</p>
+                  <div className="space-y-3">
+                    {orderDetails.items?.map((item, index) => (
+                      <motion.div
+                        key={`${item.menuItemId}-${index}`}
+                        className="flex items-center justify-between rounded-xl border border-[#FFE8D6]/60 bg-[#FFF6EB]/80 px-4 py-3"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + index * 0.05, duration: 0.4 }}
+                      >
+                        <div>
+                          <p className="text-[#1B1B1E] font-semibold">{item.name || item.menuItemName || 'Menu Item'}</p>
+                          <p className="text-sm text-[#9CA3AF]">Qty {item.quantity}</p>
+                        </div>
+                        <p className="text-[#FF6B35] font-semibold">{formatCurrency(item.price || item.itemTotal)}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border border-[#FFE8D6] rounded-2xl p-4 bg-white/80 shadow-sm">
+                  <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(orderDetails.subtotal ?? orderDetails.total)}</span>
+                  </div>
+                  {typeof orderDetails.deliveryFee === 'number' && (
+                    <div className="mt-2 flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Delivery Fee</span>
+                      <span>{formatCurrency(orderDetails.deliveryFee)}</span>
+                    </div>
+                  )}
+                  {typeof orderDetails.discount === 'number' && orderDetails.discount > 0 && (
+                    <div className="mt-2 flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Discounts</span>
+                      <span>-{formatCurrency(orderDetails.discount)}</span>
+                    </div>
+                  )}
+                  <div className="mt-4 flex items-center justify-between text-lg font-extrabold text-[#FF6B35]">
+                    <span>Total Paid</span>
+                    <span>{formatCurrency(orderDetails.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center justify-between bg-[#FFF6EB]/80 border border-[#FFE8D6] rounded-2xl px-4 py-3 text-sm text-[#B45309]">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📦</span>
+                  <span>Confirm delivery once you receive your order for loyalty points.</span>
+                </div>
+                <button
+                  onClick={() => setShowCelebration(!showCelebration)}
+                  className="text-[#FF6B35] font-semibold hover:text-[#D9480F]"
+                >
+                  {showCelebration ? 'Hide Tip' : 'Save Tip'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </div>
-      
+      </motion.div>
+
       {/* Payment Modal */}
       {showPaymentModal && (
         <PaymentModal 
