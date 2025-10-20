@@ -112,15 +112,8 @@ const StatusChangeDialog = ({ isOpen, onClose, order, onConfirm }) => {
         { value: 'cancelled', label: 'Cancel Order', color: 'red' }
       ],
       'confirmed': [
-        { value: 'preparing', label: 'Start Preparing', color: 'orange' },
+        { value: 'delivered', label: 'Mark as Delivered', color: 'green' },
         { value: 'cancelled', label: 'Cancel Order', color: 'red' }
-      ],
-      'preparing': [
-        { value: 'ready', label: 'Mark as Ready', color: 'purple' },
-        { value: 'cancelled', label: 'Cancel Order', color: 'red' }
-      ],
-      'ready': [
-        { value: 'delivered', label: 'Mark as Delivered', color: 'green' }
       ]
     };
     return transitions[currentStatus] || [];
@@ -264,9 +257,8 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
     const now = new Date();
     const diffInMinutes = Math.floor((now - orderTime) / (1000 * 60));
     
-    if (order.status === 'pending' && diffInMinutes > 10) return 'high';
-    if (order.status === 'confirmed' && diffInMinutes > 20) return 'high';
-    if (order.status === 'preparing' && diffInMinutes > 30) return 'medium';
+    if (order.status === 'pending' && diffInMinutes > 5) return 'high';
+    if (order.status === 'confirmed' && diffInMinutes > 15) return 'high';
     return 'low';
   };
 

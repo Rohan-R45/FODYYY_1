@@ -5,13 +5,10 @@ const { createValidator } = require('../middleware/validation');
 
 const router = express.Router();
 
-// Valid order status transitions
+// Valid order status transitions (simplified flow)
 const statusTransitions = {
   'pending': ['confirmed', 'cancelled'],
-  'confirmed': ['preparing', 'cancelled'],
-  'preparing': ['ready', 'cancelled'],
-  'ready': ['out_for_delivery'],
-  'out_for_delivery': ['delivered'],
+  'confirmed': ['delivered', 'cancelled'],
   'delivered': [], // Final state
   'cancelled': [] // Final state
 };
@@ -335,7 +332,7 @@ router.get('/:id/tracking',
       const estimatedTime = new Date(order.estimatedDeliveryTime);
       const timeRemaining = estimatedTime > now ? Math.ceil((estimatedTime - now) / (1000 * 60)) : 0;
       
-      // Status timeline with timestamps
+      // Status timeline with timestamps (simplified flow)
       const statusTimeline = [
         {
           status: 'pending',
@@ -347,23 +344,9 @@ router.get('/:id/tracking',
         {
           status: 'confirmed',
           label: 'Order Confirmed',
-          completed: ['confirmed', 'preparing', 'ready', 'delivered'].includes(order.status),
+          completed: ['confirmed', 'delivered'].includes(order.status),
           timestamp: order.status === 'confirmed' ? order.updatedAt : null,
           icon: '✅'
-        },
-        {
-          status: 'preparing',
-          label: 'Preparing Food',
-          completed: ['preparing', 'ready', 'delivered'].includes(order.status),
-          timestamp: order.status === 'preparing' ? order.updatedAt : null,
-          icon: '👨‍🍳'
-        },
-        {
-          status: 'ready',
-          label: 'Ready for Pickup',
-          completed: ['ready', 'delivered'].includes(order.status),
-          timestamp: order.status === 'ready' ? order.updatedAt : null,
-          icon: '🎒'
         },
         {
           status: 'delivered',
@@ -459,8 +442,8 @@ router.put('/:id/status',
       const { status } = req.body;
       const order = req.order;
 
-      // Validate status
-      const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+      // Validate status (simplified flow - only allow pending, confirmed, delivered, cancelled)
+      const validStatuses = ['pending', 'confirmed', 'delivered', 'cancelled'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -468,13 +451,11 @@ router.put('/:id/status',
         });
       }
 
-      // Check if status transition is valid
+      // Check if status transition is valid (simplified flow)
       const currentStatus = order.status;
       const validTransitions = {
         'pending': ['confirmed', 'cancelled'],
-        'confirmed': ['preparing', 'cancelled'],
-        'preparing': ['ready', 'cancelled'],
-        'ready': ['delivered'],
+        'confirmed': ['delivered', 'cancelled'],
         'delivered': [],
         'cancelled': []
       };
@@ -1586,6 +1567,117 @@ router.get('/stats/dashboard',
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve dashboard statistics',
+        ...(process.env.NODE_ENV === 'development' && { error: error.message })
+      });
+    }
+  }
+);
+
+// @desc    Submit order rating
+// @route   POST /api/orders/:id/rating
+// @access  Private (Students only)
+router.post('/:id/rating',
+  protect,
+  authorize('student'),
+  checkStudentOrderOwnership,
+  async (req, res) => {
+    try {
+      const { rating, comment } = req.body;
+      const order = req.order;
+
+      // Validate rating data
+      if (!rating) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rating is required'
+        });
+      }
+
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rating must be a number between 1 and 5'
+        });
+      }
+
+      if (comment && comment.length > 500) {
+        return res.status(400).json({
+          success: false,
+          message: 'Comment cannot exceed 500 characters'
+        });
+      }
+
+      // Check if order is delivered
+      if (order.status !== 'delivered') {
+        return res.status(400).json({
+          success: false,
+          message: 'Can only rate delivered orders'
+        });
+      }
+
+      // Check if already rated
+      if (order.rating && order.rating.overall) {
+        return res.status(400).json({
+          success: false,
+          message: 'Order has already been rated'
+        });
+      }
+
+      // Add rating to order
+      order.rating = {
+        overall: rating,
+        comment: comment || '',
+        ratedAt: new Date()
+      };
+
+      await order.save();
+
+      // Update restaurant rating
+      const restaurant = await Restaurant.findById(order.restaurantId);
+      if (restaurant) {
+        // Calculate new average rating
+        const totalScore = (restaurant.rating || 0) * (restaurant.totalRatings || 0);
+        const newTotalRatings = (restaurant.totalRatings || 0) + 1;
+        const newAverageRating = (totalScore + rating) / newTotalRatings;
+
+        restaurant.rating = Math.round(newAverageRating * 10) / 10; // Round to 1 decimal place
+        restaurant.totalRatings = newTotalRatings;
+        await restaurant.save();
+
+        console.log(`✅ Rating submitted: ${order.orderNumber} -> ${rating} stars, Restaurant avg: ${restaurant.rating}`);
+
+        res.json({
+          success: true,
+          message: 'Rating submitted successfully',
+          data: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            rating: order.rating.overall,
+            ratedAt: order.rating.ratedAt,
+            restaurantId: restaurant._id,
+            restaurantName: restaurant.name,
+            newAverageRating: restaurant.rating,
+            totalReviews: restaurant.totalRatings
+          }
+        });
+      } else {
+        res.json({
+          success: true,
+          message: 'Rating submitted successfully',
+          data: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            rating: order.rating.overall,
+            ratedAt: order.rating.ratedAt
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error('Submit rating error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to submit rating',
         ...(process.env.NODE_ENV === 'development' && { error: error.message })
       });
     }

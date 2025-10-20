@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { RestaurantProvider } from './context/RestaurantContext';
+import { RatingProvider } from './context/RatingContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BottomNavigation from './components/BottomNavigation';
@@ -99,204 +100,206 @@ function App() {
       <AuthProvider>
         <RestaurantProvider>
           <CartProvider>
-            <Router>
-              <ScrollToTop />
-            <div className="App min-h-screen">
-              <Navbar />
-              
-              {/* Main content with proper spacing for fixed navbar */}
-              <main className="pt-16 pb-20 md:pb-0">
-                <React.Suspense 
-              fallback={
-                <div className="min-h-screen flex items-center justify-center">
-                  <LoadingSpinner size="lg" />
+            <RatingProvider>
+              <Router>
+                <ScrollToTop />
+                <div className="App min-h-screen">
+                  <Navbar />
+                  
+                  {/* Main content with proper spacing for fixed navbar */}
+                  <main className="pt-16 pb-20 md:pb-0">
+                    <React.Suspense 
+                      fallback={
+                        <div className="min-h-screen flex items-center justify-center">
+                          <LoadingSpinner size="lg" />
+                        </div>
+                      }
+                    >
+                      <Routes>
+                        {/* Public Routes */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/how-it-works" element={<HowItWorks />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/terms" element={<Terms />} />
+                        
+                        {/* Placeholder routes for footer links */}
+                        <Route path="/support" element={<ComingSoon title="Help & Support" />} />
+                        <Route path="/faq" element={<ComingSoon title="Frequently Asked Questions" />} />
+                        <Route path="/partner" element={<ComingSoon title="Partner with Us" />} />
+                        <Route path="/restaurant/guidelines" element={<ComingSoon title="Restaurant Guidelines" />} />
+                        
+                        {/* Student Routes */}
+                        <Route 
+                          path="/student" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <StudentDashboard />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurants" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <RestaurantList />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurants/:id" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <RestaurantDetail />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/cart" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <CartPage />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/checkout" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <Checkout />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/orders" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <Orders />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/orders/:id" 
+                          element={
+                            <PrivateRoute requiredRole="student">
+                              <OrderDetail />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/order-tracking/:id" 
+                          element={
+                            <PrivateRoute>
+                              <OrderTracking />
+                            </PrivateRoute>
+                          } 
+                        />
+                        
+                        {/* Restaurant Routes */}
+                        <Route 
+                          path="/restaurant" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <RestaurantDashboard />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurant/profile" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <RestaurantProfile />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurant/menu" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <MenuManagement />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurant/orders" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <RestaurantOrders />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurant/orders/:id" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <OrderDetail />
+                            </PrivateRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/restaurant/analytics" 
+                          element={
+                            <PrivateRoute requiredRole="restaurant">
+                              <ComingSoon title="Analytics Dashboard" />
+                            </PrivateRoute>
+                          } 
+                        />
+                        
+                        {/* Common Protected Routes */}
+                        <Route 
+                          path="/profile" 
+                          element={
+                            <PrivateRoute>
+                              <Profile />
+                            </PrivateRoute>
+                          } 
+                        />
+                        
+                        {/* Redirect Routes */}
+                        <Route path="/dashboard" element={<Navigate to="/student" replace />} />
+                        
+                        {/* 404 Route */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </React.Suspense>
+                  </main>
+                  
+                  {/* Toast Notifications */}
+                  <Toaster
+                    position="top-right"
+                    toastOptions={{
+                      duration: 4000,
+                      style: {
+                        background: '#fff',
+                        color: '#374151',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                      },
+                      success: {
+                        iconTheme: {
+                          primary: '#10b981',
+                          secondary: '#fff',
+                        },
+                      },
+                      error: {
+                        iconTheme: {
+                          primary: '#ef4444',
+                          secondary: '#fff',
+                        },
+                      },
+                    }}
+                  />
+                  
+                  {/* Footer - Always visible and responsive */}
+                  <Footer />
+                  
+                  {/* Bottom Navigation - Mobile Only. Render once at app root */}
+                  <BottomNavigation />
                 </div>
-              }
-            >
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              
-              {/* Placeholder routes for footer links */}
-              <Route path="/support" element={<ComingSoon title="Help & Support" />} />
-              <Route path="/faq" element={<ComingSoon title="Frequently Asked Questions" />} />
-              <Route path="/partner" element={<ComingSoon title="Partner with Us" />} />
-              <Route path="/restaurant/guidelines" element={<ComingSoon title="Restaurant Guidelines" />} />
-              
-              {/* Student Routes */}
-              <Route 
-                path="/student" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <StudentDashboard />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurants" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <RestaurantList />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurants/:id" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <RestaurantDetail />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/cart" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <CartPage />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/checkout" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <Checkout />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/orders" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <Orders />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/orders/:id" 
-                element={
-                  <PrivateRoute requiredRole="student">
-                    <OrderDetail />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/order-tracking/:id" 
-                element={
-                  <PrivateRoute>
-                    <OrderTracking />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Restaurant Routes */}
-              <Route 
-                path="/restaurant" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <RestaurantDashboard />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurant/profile" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <RestaurantProfile />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurant/menu" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <MenuManagement />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurant/orders" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <RestaurantOrders />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurant/orders/:id" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <OrderDetail />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/restaurant/analytics" 
-                element={
-                  <PrivateRoute requiredRole="restaurant">
-                    <ComingSoon title="Analytics Dashboard" />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Common Protected Routes */}
-              <Route 
-                path="/profile" 
-                element={
-                  <PrivateRoute>
-                    <Profile />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Redirect Routes */}
-              <Route path="/dashboard" element={<Navigate to="/student" replace />} />
-              
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </React.Suspense>
-        </main>
-          
-          {/* Toast Notifications */}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#fff',
-                color: '#374151',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-              },
-              success: {
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
-                },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
-                },
-              },
-            }}
-          />
-          
-          {/* Footer - Always visible and responsive */}
-          <Footer />
-          
-          {/* Bottom Navigation - Mobile Only. Render once at app root */}
-          <BottomNavigation />
-            </div>
-            </Router>
+              </Router>
+            </RatingProvider>
           </CartProvider>
         </RestaurantProvider>
       </AuthProvider>

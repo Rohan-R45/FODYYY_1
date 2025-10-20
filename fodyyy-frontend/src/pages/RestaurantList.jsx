@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import restaurantService from '../services/restaurantService';
 import { createSafeLinkProps } from '../utils/navigation';
 import { isValidId } from '../utils/validation';
+import { useRatingUpdates } from '../context/RatingContext';
 import toast from 'react-hot-toast';
 import OptimizedImage from '../components/OptimizedImage';
+import RatingDisplay from '../components/RatingDisplay';
 import { Search, Star, Clock, TrendingUp, Zap, Tag, X } from 'lucide-react';
 
 const RestaurantList = () => {
@@ -31,6 +33,9 @@ const RestaurantList = () => {
 
   // Quick filter state
   const [activeQuickFilter, setActiveQuickFilter] = useState('all');
+  
+  // Rating updates subscription
+  const { subscribeToRestaurant } = useRatingUpdates();
 
   const cuisineTypes = [
     'North Indian', 'South Indian', 'Chinese', 'Italian', 'Continental',
@@ -71,6 +76,37 @@ const RestaurantList = () => {
     }, 300); // 300ms debounce
     return () => clearTimeout(handle);
   }, [searchParams]);
+
+  // Subscribe to rating updates for all restaurants
+  useEffect(() => {
+    if (restaurants.length === 0) return;
+    
+    const unsubscribers = [];
+    
+    restaurants.forEach(restaurant => {
+      // Create a stable callback for this restaurant
+      const handleRatingUpdate = (updatedRating) => {
+        // Update the restaurant's rating in the list
+        setRestaurants(prev => prev.map(r => 
+          r._id === restaurant._id 
+            ? { 
+                ...r, 
+                rating: updatedRating.rating,
+                totalReviews: updatedRating.totalReviews
+              }
+            : r
+        ));
+      };
+      
+      const unsubscribe = subscribeToRestaurant(restaurant._id, handleRatingUpdate);
+      unsubscribers.push(unsubscribe);
+    });
+    
+    // Cleanup: unsubscribe when restaurants list changes or component unmounts
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [restaurants.map(r => r._id).join(','), subscribeToRestaurant]);
 
   const loadRestaurants = async () => {
     try {
@@ -377,11 +413,14 @@ const RestaurantList = () => {
                         )}
 
                         {/* Rating Badge */}
-                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
-                          <Star className="w-4 h-4 text-orange-500 fill-orange-500" />
-                          <span className="font-bold text-gray-900">
-                            {restaurant.rating?.toFixed(1) || 'New'}
-                          </span>
+                        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
+                          <RatingDisplay 
+                            rating={restaurant.rating || 0}
+                            totalReviews={restaurant.totalReviews || 0}
+                            size="sm"
+                            showCount={true}
+                            animated={true}
+                          />
                         </div>
 
                         {/* Hover CTA */}
@@ -409,7 +448,7 @@ const RestaurantList = () => {
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-1 text-gray-600">
                             <Clock className="w-4 h-4 text-orange-500" />
-                            <span className="font-medium">{restaurant.deliveryTime || '30-40'} min</span>
+                            <span className="font-medium">{restaurant.deliveryTime || '30-40'} </span>
                           </div>
                           <div className="flex items-center gap-1 text-gray-600">
                             <TrendingUp className="w-4 h-4 text-green-500" />

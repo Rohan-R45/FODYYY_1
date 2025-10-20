@@ -509,6 +509,61 @@ const orderService = {
         }
       };
     }
+  },
+
+  // Submit order rating
+  submitRating: async (orderId, ratingData) => {
+    try {
+      // Validate order ID format
+      if (!orderId || !isValidId(orderId)) {
+        return {
+          success: false,
+          message: 'Invalid order ID format'
+        };
+      }
+
+      // Validate rating data
+      if (!ratingData.rating) {
+        return {
+          success: false,
+          message: 'Rating is required'
+        };
+      }
+
+      if (typeof ratingData.rating !== 'number' || ratingData.rating < 1 || ratingData.rating > 5) {
+        return {
+          success: false,
+          message: 'Rating must be between 1 and 5'
+        };
+      }
+
+      const response = await api.post(`/orders/${orderId}/rating`, {
+        rating: ratingData.rating,
+        comment: ratingData.comment || ''
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          message: error.response.data.message || 'Cannot rate this order'
+        };
+      }
+      
+      if (error.response?.status === 403) {
+        return {
+          success: false,
+          message: 'Access denied. You can only rate your own orders.'
+        };
+      }
+
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to submit rating'
+      };
+    }
   }
 };
 

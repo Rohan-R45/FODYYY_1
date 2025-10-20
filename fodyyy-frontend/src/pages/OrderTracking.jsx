@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useRatingUpdates } from '../context/RatingContext';
 import orderService from '../services/orderService';
 import { formatCurrency, formatDateTime, getRelativeTime } from '../utils/helpers';
 import UPIPaymentModal from '../components/UPIPaymentModal';
 import PaymentConfirmationForm from '../components/PaymentConfirmationForm';
 import PaymentStatusBadge from '../components/PaymentStatusBadge';
+import RatingModal from '../components/RatingModal';
+import RatingDisplay from '../components/RatingDisplay';
 import toast from 'react-hot-toast';
 
 const stepVariants = {
@@ -310,6 +313,10 @@ const OrderTracking = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showConfirmationForm, setShowConfirmationForm] = useState(false);
   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  
+  const { updateRestaurantRating } = useRatingUpdates();
 
   useEffect(() => {
     loadTrackingData();
@@ -323,6 +330,19 @@ const OrderTracking = () => {
     
     return () => clearInterval(interval);
   }, [id]);
+
+  // Show rating modal when order is delivered and not yet rated
+  useEffect(() => {
+    if (trackingData?.order && trackingData.order.status === 'delivered') {
+      // Check if order hasn't been rated yet
+      if (!trackingData.order.rating?.overall) {
+        // Show modal with a small delay to let UI settle
+        setTimeout(() => {
+          setShowRatingModal(true);
+        }, 500);
+      }
+    }
+  }, [trackingData?.order?.status, trackingData?.order?.rating]);
 
   const loadTrackingData = async () => {
     try {
@@ -387,6 +407,42 @@ const OrderTracking = () => {
       toast.error('Failed to confirm payment');
     } finally {
       setIsConfirmingPayment(false);
+    }
+  };
+
+  const handleRatingSubmit = async (ratingData) => {
+    try {
+      setIsSubmittingRating(true);
+      
+      const response = await orderService.submitRating(id, ratingData);
+      
+      if (response.success) {
+        toast.success('⭐ Rating submitted! Thank you for your feedback!');
+        setShowRatingModal(false);
+        
+        // Broadcast rating update to all subscribers
+        if (trackingData?.restaurant?._id && response.newAverageRating !== undefined) {
+          updateRestaurantRating(
+            trackingData.restaurant._id,
+            response.newAverageRating,
+            response.totalReviews || trackingData.restaurant.totalReviews || 1
+          );
+        }
+        
+        // Reload tracking data to reflect the updated rating
+        await loadTrackingData();
+        
+        return { success: true };
+      } else {
+        toast.error(response.message || 'Failed to submit rating');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast.error('Failed to submit rating');
+      return { success: false };
+    } finally {
+      setIsSubmittingRating(false);
     }
   };
 
@@ -852,6 +908,79 @@ const OrderTracking = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* Rating Card - Show after delivery */}
+          {order.status === 'delivered' && (
+            <motion.div
+              className="mt-10 relative bg-gradient-to-br from-[#FFF5E1] via-[#FFE8D6] to-[#FFD23F]/30 backdrop-blur-xl border border-white/80 rounded-3xl shadow-xl p-6 sm:p-8 flex flex-col"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-[#FFD23F]/20 pointer-events-none rounded-3xl" />
+              <div className="relative">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#1B1B1E]">✨ Rate Your Experience</h3>
+                    <p className="mt-1 text-sm text-[#6B7280]">Help us improve by sharing your feedback</p>
+                  </div>
+                  <div className="text-4xl">⭐</div>
+                </div>
+
+                {order.rating?.overall ? (
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-2xl border border-[#FFD23F]/50 bg-white/90 px-4 py-3 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-[#9CA3AF] uppercase tracking-wide">Your Rating</p>
+                        <div className="mt-2 flex items-center gap-3">
+                          <RatingDisplay 
+                            rating={order.rating.overall} 
+                            size="lg"
+                            animated={false}
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowRatingModal(true)}
+                        className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF9F1C] to-[#FF6B35] px-4 py-2 text-white text-sm font-semibold shadow hover:shadow-lg transition"
+                      >
+                        Edit
+                      </button>
+                    </div>
+
+                    {order.rating?.comment && (
+                      <div className="rounded-2xl border border-[#FFD23F]/50 bg-white/90 px-4 py-3 shadow-sm">
+                        <p className="text-xs text-[#9CA3AF] uppercase tracking-wide">Your Comment</p>
+                        <p className="mt-2 text-sm text-[#1B1B1E] italic">"{order.rating.comment}"</p>
+                      </div>
+                    )}
+
+                    <div className="rounded-2xl border border-green-200/50 bg-green-50/50 px-4 py-3 shadow-sm flex items-start gap-3">
+                      <span className="text-lg mt-0.5">✅</span>
+                      <div>
+                        <p className="text-sm font-semibold text-green-700">Thank you for rating!</p>
+                        <p className="text-xs text-green-600 mt-1">Your feedback helps restaurants serve better food</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-6">
+                    <button
+                      onClick={() => setShowRatingModal(true)}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF9F1C] via-[#FF6B35] to-[#FFD23F] px-6 py-4 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <span>⭐</span>
+                      Rate This Order Now
+                      <span>→</span>
+                    </button>
+                    <p className="text-xs text-[#6B7280] text-center mt-3">
+                      Share your thoughts to help others discover great food!
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -871,6 +1000,17 @@ const OrderTracking = () => {
           orderData={paymentData}
           onSubmit={handlePaymentConfirmation}
           isSubmitting={isConfirmingPayment}
+        />
+      )}
+
+      {trackingData && (
+        <RatingModal
+          isOpen={showRatingModal}
+          onClose={() => setShowRatingModal(false)}
+          onSubmit={handleRatingSubmit}
+          orderNumber={trackingData.order?.orderNumber}
+          restaurantName={trackingData.restaurant?.name}
+          isLoading={isSubmittingRating}
         />
       )}
     </div>

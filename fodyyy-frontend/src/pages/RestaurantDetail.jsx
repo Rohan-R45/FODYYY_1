@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import restaurantService from '../services/restaurantService';
 import menuService from '../services/menuService';
 import { useCart } from '../context/CartContext';
+import { useRatingUpdates } from '../context/RatingContext';
 import { formatCurrency } from '../utils/helpers';
 import { validateRestaurantId, isValidId } from '../utils/validation';
 import { RestaurantRouteGuard } from '../components/RouteGuard';
 import toast from 'react-hot-toast';
 import Cart from '../components/Cart';
 import LoadingSpinner from '../components/LoadingSpinner';
+import RatingDisplay from '../components/RatingDisplay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -32,6 +34,7 @@ const RestaurantDetailContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart, cartItems, getCartItemQuantity, getCartTotal, updateQuantity } = useCart();
+  const { subscribeToRestaurant } = useRatingUpdates();
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +69,21 @@ const RestaurantDetailContent = () => {
       document.body.style.overflow = 'unset';
     };
   }, [showFilterModal]);
+
+  // Subscribe to rating updates for this restaurant
+  useEffect(() => {
+    if (!restaurant?._id) return;
+    
+    const unsubscribe = subscribeToRestaurant(restaurant._id, (updatedRating) => {
+      setRestaurant(prev => prev ? {
+        ...prev,
+        rating: updatedRating.rating,
+        totalReviews: updatedRating.totalReviews
+      } : null);
+    });
+    
+    return () => unsubscribe();
+  }, [restaurant?._id, subscribeToRestaurant]);
 
   const loadRestaurantData = async () => {
     try {
@@ -301,6 +319,24 @@ const RestaurantDetailContent = () => {
             <p className="text-gray-600 text-sm mb-3">{restaurant.description}</p>
             
             <div className="flex flex-wrap items-center gap-3 text-sm">
+              {/* Rating Display */}
+              {restaurant.rating > 0 && (
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.1 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200"
+                >
+                  <RatingDisplay 
+                    rating={restaurant.rating}
+                    totalReviews={restaurant.totalReviews || 0}
+                    size="md"
+                    showCount={true}
+                    animated={true}
+                  />
+                </motion.div>
+              )}
+
               {/* Open Status Badge */}
               <motion.span 
                 initial={{ scale: 0 }}
