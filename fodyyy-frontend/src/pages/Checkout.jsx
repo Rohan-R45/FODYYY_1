@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useRatingUpdates } from '../context/RatingContext';
 import { formatCurrency } from '../utils/helpers';
 import orderService from '../services/orderService';
+import RatingModal from '../components/RatingModal';
+import RatingDisplay from '../components/RatingDisplay';
 import toast from 'react-hot-toast';
 
 const Checkout = () => {
@@ -484,7 +487,42 @@ const backgroundGradient =
 
 const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal, showCelebration, setShowCelebration }) => {
   const navigate = useNavigate();
+  const { updateRestaurantRating } = useRatingUpdates();
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const restaurantName = orderDetails.restaurant?.name || 'Tasty Tales';
+  
+  const handleRatingSubmit = async (ratingData) => {
+    try {
+      setIsSubmittingRating(true);
+      const response = await orderService.submitRating(orderDetails._id, ratingData);
+      
+      if (response.success) {
+        toast.success('⭐ Rating submitted! Thank you for your feedback!');
+        
+        if (orderDetails.restaurant?._id && response.newAverageRating !== undefined) {
+          updateRestaurantRating(
+            orderDetails.restaurant._id,
+            response.newAverageRating,
+            response.totalReviews || orderDetails.restaurant.totalReviews || 1
+          );
+        }
+        
+        setShowRatingModal(false);
+        return { success: true };
+      } else {
+        toast.error(response.message || 'Failed to submit rating');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast.error('Failed to submit rating');
+      return { success: false };
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
   const estimatedDeliveryInfo = React.useMemo(() => {
     const fallbackMinutes = 45;
     const now = new Date();
@@ -630,25 +668,34 @@ const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal
               </AnimatePresence>
 
               <motion.div
-                className="mt-auto flex flex-col sm:flex-row gap-3 pt-8"
+                className="mt-auto space-y-3 pt-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1, duration: 0.5 }}
               >
                 <button
-                  onClick={() => navigate(`/orders/${orderDetails._id}`)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF9F1C] to-[#FFD23F] px-6 py-3 text-white font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 transition-all"
+                  onClick={() => setShowRatingModal(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF9F1C] to-[#FF6B35] px-6 py-3 text-white font-semibold shadow-lg shadow-orange-100 hover:shadow-orange-200 transition-all"
                 >
-                  <span>Track Live Journey</span>
-                  <span className="text-lg">→</span>
+                  <span>⭐ Rate Restaurant</span>
                 </button>
 
-                <button
-                  onClick={() => navigate('/restaurants')}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-white/90 border border-[#FFE8D6] px-6 py-3 text-[#B45309] font-semibold shadow-sm hover:bg-white transition"
-                >
-                  Continue Exploring
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => navigate(`/orders/${orderDetails._id}`)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF9F1C] to-[#FFD23F] px-6 py-3 text-white font-semibold shadow-lg shadow-orange-200 hover:shadow-orange-300 transition-all"
+                  >
+                    <span>Track Live Journey</span>
+                    <span className="text-lg">→</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/restaurants')}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-white/90 border border-[#FFE8D6] px-6 py-3 text-[#B45309] font-semibold shadow-sm hover:bg-white transition"
+                  >
+                    Continue Exploring
+                  </button>
+                </div>
               </motion.div>
             </div>
           </motion.div>
@@ -762,6 +809,16 @@ const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal
           onClose={() => setShowPaymentModal(false)}
         />
       )}
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        onSubmit={handleRatingSubmit}
+        orderNumber={orderDetails.orderNumber}
+        restaurantName={restaurantName}
+        isLoading={isSubmittingRating}
+      />
     </div>
   );
 };

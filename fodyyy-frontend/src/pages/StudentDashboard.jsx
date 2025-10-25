@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useRatingUpdates } from '../context/RatingContext';
 import restaurantService from '../services/restaurantService';
 import orderService from '../services/orderService';
 import { formatCurrency, formatDateTime, getRelativeTime, safeNumber } from '../utils/helpers';
@@ -14,6 +15,7 @@ import {
   EmptyState,
   StatusBadge 
 } from '../components/ui';
+import RatingModal from '../components/RatingModal';
 import { 
   ShoppingBag, 
   DollarSign, 
@@ -29,11 +31,15 @@ import toast from 'react-hot-toast';
 const StudentDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { updateRestaurantRating } = useRatingUpdates();
   const [searchQuery, setSearchQuery] = useState('');
   const [featuredRestaurants, setFeaturedRestaurants] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [orderStats, setOrderStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -84,6 +90,47 @@ const StudentDashboard = () => {
 
   const handleQuickFilter = (cuisine) => {
     navigate(`/restaurants?cuisine=${encodeURIComponent(cuisine)}`);
+  };
+
+  const handleRateOrder = (order) => {
+    setSelectedOrder(order);
+    setShowRatingModal(true);
+  };
+
+  const handleRatingSubmit = async (ratingData) => {
+    if (!selectedOrder) return { success: false };
+    
+    try {
+      setIsSubmittingRating(true);
+      
+      const response = await orderService.submitRating(selectedOrder._id, ratingData);
+      
+      if (response.success) {
+        toast.success('⭐ Rating submitted! Thank you for your feedback!');
+        setShowRatingModal(false);
+        
+        if (selectedOrder.restaurant?._id && response.newAverageRating !== undefined) {
+          updateRestaurantRating(
+            selectedOrder.restaurant._id,
+            response.newAverageRating,
+            response.totalReviews || selectedOrder.restaurant.totalReviews || 1
+          );
+        }
+        
+        await loadDashboardData();
+        
+        return { success: true };
+      } else {
+        toast.error(response.message || 'Failed to submit rating');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast.error('Failed to submit rating');
+      return { success: false };
+    } finally {
+      setIsSubmittingRating(false);
+    }
   };
 
   const searchSuggestions = [
@@ -360,9 +407,9 @@ const StudentDashboard = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.1 + index * 0.1 }}
                 >
-                  <Link to={`/orders/${order._id}`}>
-                    <GlassCard hover className="p-6">
-                      <div className="flex items-center justify-between flex-wrap gap-4">
+                  <GlassCard hover className="p-6">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <Link to={`/orders/${order._id}`} className="flex-1">
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center flex-shrink-0">
                             <ShoppingBag className="w-8 h-8 text-white" />
@@ -377,23 +424,51 @@ const StudentDashboard = () => {
                             <StatusBadge status={order.status} size="sm" />
                           </div>
                         </div>
+                      </Link>
+                      <div className="flex flex-col items-end gap-3">
                         <div className="text-right">
                           <p className="text-2xl font-bold text-gray-900">
-                            {formatCurrency(order.totalAmount || 0)}
+                            {formatCurrency((typeof order.total === 'number') ? order.total : (order.subtotal + (order.deliveryFee || 0) + (order.tax || 0) - (typeof order.discount === 'number' ? order.discount : (order?.discount?.amount || 0))))}
                           </p>
                           <p className="text-sm text-orange-600 font-medium">
                             View Details →
                           </p>
                         </div>
+                        {order.status === 'delivered' && !order.rating?.overall && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleRateOrder(order);
+                            }}
+                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                          >
+                            <Star className="w-4 h-4 fill-white" />
+                            Rate Order
+                          </motion.button>
+                        )}
                       </div>
-                    </GlassCard>
-                  </Link>
+                    </div>
+                  </GlassCard>
                 </motion.div>
               ))}
             </div>
           </motion.div>
         )}
       </div>
+
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => {
+          setShowRatingModal(false);
+          setSelectedOrder(null);
+        }}
+        onSubmit={handleRatingSubmit}
+        orderNumber={selectedOrder?.orderNumber}
+        restaurantName={selectedOrder?.restaurant?.name}
+        isLoading={isSubmittingRating}
+      />
     </div>
   );
 };

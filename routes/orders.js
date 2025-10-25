@@ -365,6 +365,11 @@ router.get('/:id/tracking',
           paymentStatus: order.paymentStatus,
           paymentMethod: order.paymentMethod,
           totalAmount: order.totalAmount,
+          subtotal: order.totalAmount - order.deliveryFee - order.tax + (order.discount?.amount || 0),
+          deliveryFee: order.deliveryFee,
+          tax: order.tax,
+          discount: order.discount,
+          total: order.totalAmount,
           deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           specialInstructions: order.specialInstructions,
@@ -373,7 +378,8 @@ router.get('/:id/tracking',
           actualDeliveryTime: order.actualDeliveryTime,
           timeRemaining: timeRemaining,
           canCancel: order.canCancel,
-          canRate: order.canRate
+          canRate: order.canRate,
+          rating: order.rating
         },
         restaurant: {
           _id: order.restaurantId._id,
@@ -590,6 +596,7 @@ router.get('/restaurant/manage',
           total,
           createdAt: order.createdAt,
           estimatedDeliveryTime: order.estimatedDeliveryTime,
+          deliveryAddress: order.deliveryAddress,
           student: {
             _id: order.studentId._id,
             name: order.studentId.name,
@@ -1649,27 +1656,23 @@ router.post('/:id/rating',
         res.json({
           success: true,
           message: 'Rating submitted successfully',
-          data: {
-            orderId: order._id,
-            orderNumber: order.orderNumber,
-            rating: order.rating.overall,
-            ratedAt: order.rating.ratedAt,
-            restaurantId: restaurant._id,
-            restaurantName: restaurant.name,
-            newAverageRating: restaurant.rating,
-            totalReviews: restaurant.totalRatings
-          }
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          rating: order.rating.overall,
+          ratedAt: order.rating.ratedAt,
+          restaurantId: restaurant._id,
+          restaurantName: restaurant.name,
+          newAverageRating: restaurant.rating,
+          totalReviews: restaurant.totalRatings
         });
       } else {
         res.json({
           success: true,
           message: 'Rating submitted successfully',
-          data: {
-            orderId: order._id,
-            orderNumber: order.orderNumber,
-            rating: order.rating.overall,
-            ratedAt: order.rating.ratedAt
-          }
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          rating: order.rating.overall,
+          ratedAt: order.rating.ratedAt
         });
       }
 

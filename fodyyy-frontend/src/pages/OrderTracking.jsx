@@ -331,9 +331,9 @@ const OrderTracking = () => {
     return () => clearInterval(interval);
   }, [id]);
 
-  // Show rating modal when order is delivered and not yet rated
+  // Show rating modal when order hasn't been rated yet
   useEffect(() => {
-    if (trackingData?.order && trackingData.order.status === 'delivered') {
+    if (trackingData?.order) {
       // Check if order hasn't been rated yet
       if (!trackingData.order.rating?.overall) {
         // Show modal with a small delay to let UI settle

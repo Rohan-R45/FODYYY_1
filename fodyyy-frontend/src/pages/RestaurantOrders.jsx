@@ -241,7 +241,10 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
     return icons[status] || '📋';
   };
 
-  const formatAddress = (student) => {
+  const formatAddress = (student, deliveryAddress) => {
+    if (deliveryAddress && typeof deliveryAddress === 'string' && deliveryAddress.trim()) {
+      return deliveryAddress;
+    }
     if (!student) return 'No delivery address provided';
     if (student.address?.hostel && student.address?.room) {
       return `${student.address.hostel}, Room ${student.address.room}`;
@@ -329,7 +332,7 @@ const OrderDetailsCard = ({ order, onStatusUpdate, onViewTracking, onPaymentVeri
               <p className="flex flex-col gap-1">
                 <span className="font-medium">Delivery:</span>
                 <span className="text-gray-600 text-sm leading-snug">
-                  {formatAddress(order.student || order.customer)}
+                  {formatAddress(order.student || order.customer, order.deliveryAddress)}
                 </span>
               </p>
             </div>
