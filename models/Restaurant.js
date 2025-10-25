@@ -145,6 +145,17 @@ const restaurantSchema = new mongoose.Schema({
       bankName: String
     }
   },
+  deliveryCharge: {
+    type: Number,
+    default: 0,
+    min: [0, 'Delivery charge cannot be negative'],
+    validate: {
+      validator: function(v) {
+        return Number.isFinite(v);
+      },
+      message: 'Delivery charge must be a valid number'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

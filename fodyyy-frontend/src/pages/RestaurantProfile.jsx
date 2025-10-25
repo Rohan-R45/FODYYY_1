@@ -19,23 +19,8 @@ const RestaurantProfile = () => {
     phone: '',
     email: '',
     image: '',
-    operatingHours: {
-      open: '09:00',
-      close: '22:00',
-      isOpen: true
-    },
-    deliverySettings: {
-      deliveryTime: 30,
-      deliveryCharge: 30,
-      freeDeliveryAbove: 300,
-      deliveryRadius: 5
-    },
-    cuisineTypes: [],
-    features: {
-      takeaway: true,
-      delivery: true,
-      dineIn: false
-    }
+    deliveryCharge: 0,
+    cuisineTypes: []
   });
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -62,23 +47,8 @@ const RestaurantProfile = () => {
           phone: data.phone || '',
           email: data.email || user?.email || '',
           image: data.image || '',
-          operatingHours: {
-            open: data.operatingHours?.open || '09:00',
-            close: data.operatingHours?.close || '22:00',
-            isOpen: data.operatingHours?.isOpen !== false
-          },
-          deliverySettings: {
-            deliveryTime: data.deliverySettings?.deliveryTime || 30,
-            deliveryCharge: data.deliverySettings?.deliveryCharge || 30,
-            freeDeliveryAbove: data.deliverySettings?.freeDeliveryAbove || 300,
-            deliveryRadius: data.deliverySettings?.deliveryRadius || 5
-          },
-          cuisineTypes: data.cuisineTypes || [],
-          features: {
-            takeaway: data.features?.takeaway !== false,
-            delivery: data.features?.delivery !== false,
-            dineIn: data.features?.dineIn || false
-          }
+          deliveryCharge: typeof data.deliveryCharge === 'number' ? data.deliveryCharge : 0,
+          cuisineTypes: data.cuisine || []
         });
         
         if (data.image) {
@@ -412,161 +382,27 @@ const RestaurantProfile = () => {
               </div>
             </div>
 
-            {/* Operating Hours */}
+            {/* Delivery Charge Settings */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Operating Hours</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Delivery Charge</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Opening Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.operatingHours.open}
-                    onChange={(e) => handleInputChange('operatingHours.open', e.target.value)}
-                    className="input w-full"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Closing Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.operatingHours.close}
-                    onChange={(e) => handleInputChange('operatingHours.close', e.target.value)}
-                    className="input w-full"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.operatingHours.isOpen}
-                    onChange={(e) => handleInputChange('operatingHours.isOpen', e.target.value === 'true')}
-                    className="input w-full"
-                  >
-                    <option value={true}>Open</option>
-                    <option value={false}>Temporarily Closed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Delivery Settings */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Delivery Settings</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Time (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deliverySettings.deliveryTime}
-                    onChange={(e) => handleInputChange('deliverySettings.deliveryTime', parseInt(e.target.value))}
-                    placeholder="30"
-                    className="input w-full"
-                    min="15"
-                    max="120"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Charge (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deliverySettings.deliveryCharge}
-                    onChange={(e) => handleInputChange('deliverySettings.deliveryCharge', parseInt(e.target.value))}
-                    placeholder="30"
-                    className="input w-full"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Free Delivery Above (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deliverySettings.freeDeliveryAbove}
-                    onChange={(e) => handleInputChange('deliverySettings.freeDeliveryAbove', parseInt(e.target.value))}
-                    placeholder="300"
-                    className="input w-full"
-                    min="100"
-                    max="1000"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Radius (km)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deliverySettings.deliveryRadius}
-                    onChange={(e) => handleInputChange('deliverySettings.deliveryRadius', parseInt(e.target.value))}
-                    placeholder="5"
-                    className="input w-full"
-                    min="1"
-                    max="20"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Service Features */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Service Features</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.features.delivery}
-                    onChange={(e) => handleInputChange('features.delivery', e.target.checked)}
-                    className="text-primary-600 focus:ring-primary-600 mr-3"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900">Delivery</span>
-                    <p className="text-sm text-gray-600">Deliver food to customers</p>
-                  </div>
+              <div className="max-w-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Delivery Charge (₹) *
                 </label>
-                
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.features.takeaway}
-                    onChange={(e) => handleInputChange('features.takeaway', e.target.checked)}
-                    className="text-primary-600 focus:ring-primary-600 mr-3"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900">Takeaway</span>
-                    <p className="text-sm text-gray-600">Customers can pick up orders</p>
-                  </div>
-                </label>
-                
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.features.dineIn}
-                    onChange={(e) => handleInputChange('features.dineIn', e.target.checked)}
-                    className="text-primary-600 focus:ring-primary-600 mr-3"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900">Dine In</span>
-                    <p className="text-sm text-gray-600">Accept table reservations</p>
-                  </div>
-                </label>
+                <input
+                  type="number"
+                  value={formData.deliveryCharge}
+                  onChange={(e) => handleInputChange('deliveryCharge', parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="input w-full"
+                  min="0"
+                  max="500"
+                  step="0.5"
+                />
+                <p className="mt-2 text-sm text-gray-600">
+                  Set the delivery charge for orders from your restaurant. Use 0 for free delivery.
+                </p>
               </div>
             </div>
 

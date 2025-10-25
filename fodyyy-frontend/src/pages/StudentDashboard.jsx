@@ -310,7 +310,7 @@ const StudentDashboard = () => {
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-1 text-gray-600">
                               <Clock className="w-4 h-4" />
-                              <span>{restaurant.deliveryTime || '30-40'} min</span>
+                              <span>{restaurant.deliveryTime || '30-40'} </span>
                             </div>
                             <span className="text-orange-600 font-semibold">
                               Order Now →

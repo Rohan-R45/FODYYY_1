@@ -333,7 +333,7 @@ router.put('/profile',
   authorize('restaurant'),
   async (req, res) => {
     try {
-      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange } = req.body;
+      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange, deliveryCharge } = req.body;
 
       // Find restaurant by owner ID
       let restaurant = await Restaurant.findOne({ ownerId: req.user._id });
@@ -390,6 +390,16 @@ router.put('/profile',
         if (cuisineError) errors.push({ field: 'cuisine', message: cuisineError });
       }
 
+      if (deliveryCharge !== undefined) {
+        if (typeof deliveryCharge !== 'number') {
+          errors.push({ field: 'deliveryCharge', message: 'Delivery charge must be a number' });
+        } else if (deliveryCharge < 0) {
+          errors.push({ field: 'deliveryCharge', message: 'Delivery charge cannot be negative' });
+        } else if (!Number.isFinite(deliveryCharge)) {
+          errors.push({ field: 'deliveryCharge', message: 'Delivery charge must be a valid number' });
+        }
+      }
+
       if (errors.length > 0) {
         return res.status(400).json({
           success: false,
@@ -408,6 +418,7 @@ router.put('/profile',
       if (deliveryTime !== undefined) updateFields.deliveryTime = deliveryTime;
       if (cuisine !== undefined) updateFields.cuisine = Array.isArray(cuisine) ? cuisine : [cuisine];
       if (priceRange !== undefined) updateFields.priceRange = priceRange;
+      if (deliveryCharge !== undefined) updateFields.deliveryCharge = deliveryCharge;
 
       // Update restaurant
       restaurant = await Restaurant.findByIdAndUpdate(

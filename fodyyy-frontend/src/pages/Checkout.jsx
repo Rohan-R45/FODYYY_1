@@ -55,35 +55,30 @@ const Checkout = () => {
 
   const cartRestaurant = getCartRestaurant();
   const subtotal = getCartTotal();
-  // Delivery fee: fetch from restaurant settings via restaurant details, fallback to 15 if unavailable
-  const [deliverySettings, setDeliverySettings] = useState({ charge: 15, freeAbove: 300 });
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [restaurantName, setRestaurantName] = useState('');
 
   useEffect(() => {
-    // Load latest delivery settings from the restaurant endpoint on mount and whenever cart changes restaurant
-    const fetchDeliverySettings = async () => {
+    const fetchDeliveryCharge = async () => {
       try {
         if (!cartRestaurant?.id) return;
         const resp = await (await import('../services/restaurantService')).default.getRestaurantById(cartRestaurant.id);
         if (resp?.success && resp?.data?.restaurant) {
-          const ds = resp.data.restaurant.deliverySettings || {};
-          setDeliverySettings({
-            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15,
-            freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
-          });
-        } else {
-          setDeliverySettings({ charge: 15, freeAbove: 300 });
+          const charge = typeof resp.data.restaurant.deliveryCharge === 'number' 
+            ? resp.data.restaurant.deliveryCharge 
+            : 0;
+          setDeliveryCharge(charge);
+          setRestaurantName(resp.data.restaurant.name || '');
         }
       } catch (e) {
-        setDeliverySettings({ charge: 15, freeAbove: 300 });
+        setDeliveryCharge(0);
       }
     };
 
-    fetchDeliverySettings();
+    fetchDeliveryCharge();
   }, [cartRestaurant?.id]);
 
-  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300)
-    ? 0
-    : (deliverySettings.charge || 15);
+  const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
   const total = subtotal + deliveryFee;
 
   const handleAddressChange = (field, value) => {
@@ -427,7 +422,9 @@ const Checkout = () => {
                   </div>
                   
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Delivery Fee</span>
+                    <span className="text-gray-600">
+                      Delivery {restaurantName && <span className="text-xs text-gray-500">from {restaurantName}</span>}
+                    </span>
                     <span className={deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}>
                       {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
                     </span>

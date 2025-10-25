@@ -29,7 +29,7 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [deliverySettings, setDeliverySettings] = useState({ charge: 15, freeAbove: 300 });
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
 
   // Filter cart items for current restaurant if restaurantId is provided
   const relevantItems = restaurantId 
@@ -39,26 +39,25 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
   const subtotal = relevantItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   useEffect(() => {
-    const fetchDeliverySettings = async () => {
+    const fetchDeliveryCharge = async () => {
       try {
         const restId = restaurantId || (relevantItems[0]?.restaurantId);
         if (!restId) return;
         const resp = await (await import('../services/restaurantService')).default.getRestaurantById(restId);
         if (resp?.success && resp?.data?.restaurant) {
-          const ds = resp.data.restaurant.deliverySettings || {};
-          setDeliverySettings({
-            charge: typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15,
-            freeAbove: typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300
-          });
+          const charge = typeof resp.data.restaurant.deliveryCharge === 'number' 
+            ? resp.data.restaurant.deliveryCharge 
+            : 0;
+          setDeliveryCharge(charge);
         }
       } catch {
-        setDeliverySettings({ charge: 15, freeAbove: 300 });
+        setDeliveryCharge(0);
       }
     };
-    fetchDeliverySettings();
+    fetchDeliveryCharge();
   }, [restaurantId, relevantItems.length]);
 
-  const deliveryFee = subtotal > 0 && subtotal >= (deliverySettings.freeAbove || 300) ? 0 : (subtotal > 0 ? (deliverySettings.charge || 15) : 0);
+  const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
   const total = subtotal + deliveryFee - discount;
 
@@ -307,26 +306,7 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
                       <span className="text-orange-600">{formatCurrency(total)}</span>
                     </div>
 
-                    {/* Free Delivery Progress */}
-                    {subtotal > 0 && subtotal < deliverySettings.freeAbove && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="text-gray-600">
-                            Add {formatCurrency(deliverySettings.freeAbove - subtotal)} for free delivery
-                          </span>
-                          <span className="text-orange-600 font-bold">
-                            {Math.round((subtotal / deliverySettings.freeAbove) * 100)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min((subtotal / deliverySettings.freeAbove) * 100, 100)}%` }}
-                            className="bg-gradient-to-r from-orange-500 to-yellow-400 h-2 rounded-full"
-                          />
-                        </div>
-                      </div>
-                    )}
+
                   </div>
 
                   {/* Delivery Address */}

@@ -715,12 +715,12 @@ router.post('/',
       // Calculate subtotal (sum of item prices at order time)
       const subtotal = calculateOrderTotal(orderItems);
 
-      // Determine delivery fee using restaurant settings when available, else use defaults
-      // Defaults: charge = 15, freeAbove = 300 (matches frontend fallback)
-      const ds = (restaurant && restaurant.deliverySettings) ? restaurant.deliverySettings : {};
-      const deliveryCharge = typeof ds.deliveryCharge === 'number' ? ds.deliveryCharge : 15;
-      const freeAbove = typeof ds.freeDeliveryAbove === 'number' ? ds.freeDeliveryAbove : 300;
-      const deliveryFee = subtotal > 0 && subtotal >= freeAbove ? 0 : (subtotal > 0 ? deliveryCharge : 0);
+      // Fetch restaurant's deliveryCharge directly from database
+      const restaurantData = await Restaurant.findById(restaurantId).select('deliveryCharge');
+      const deliveryCharge = (restaurantData && typeof restaurantData.deliveryCharge === 'number') 
+        ? restaurantData.deliveryCharge 
+        : 0;
+      const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
 
       // Generate unique order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
