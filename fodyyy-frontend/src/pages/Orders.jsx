@@ -227,7 +227,7 @@ const OrderCard = ({ order, isExpanded, onToggleExpand, onReorder, getStatusBadg
           </div>
           <div className="flex items-center gap-2">
             {order.status === 'delivered' && (
-              <button onClick={onReorder} className="text-sm text-rose-600 hover:text-rose-700 font-medium">Reorder</button>
+              <button onClick={onReorder} className="text-sm text-white hover:text-white font-medium">Reorder</button>
             )}
             <button onClick={onToggleExpand} className="p-2 hover:bg-gray-100 rounded-full">
               <svg className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -207,7 +207,7 @@ const Home = () => {
       name: 'V. Sai Akhil',
       role: 'B.Tech CSE, 3rd Year',
       avatar: '👩‍🎓',
-      text: 'FOODY has been a lifesaver during Mess conflicts! Fresh, hot meals delivered right to my dorm. The biryani from Spice Garden is my absolute favorite!',
+      text: 'Absolutely love FOODY! The ordering process is smooth and quick, and I always get my food delivered fresh and on time. It’s made campus life so much easier',
       rating: 5,
     },
     {
@@ -215,7 +215,7 @@ const Home = () => {
       name: 'P.Ganesh Sai',
       role: 'B.TECH, 3rd Year',
       avatar: '👨‍🎓',
-      text: 'Amazing service! Quick delivery and authentic taste. The South Indian meals remind me of home. Highly recommend the sambar rice combo!',
+      text: '"FOODY is the best thing that happened to Tirupati campus foodies. Tons of restaurant choices, accurate tracking, and friendly support. I use it every week, and the experience just keeps getting better!',
       rating: 5,
     },
     {
@@ -223,7 +223,7 @@ const Home = () => {
       name: 'E.Rishikesh',
       role: 'B.Tech , 3rd Year',
       avatar: '👩‍💻',
-      text: "Love the variety of options available. From North Indian to South Indian to Chinese - there's something for every craving. Great app interface too!",
+      text: "The interface is modern and easy to use, and I appreciate how delivery charges and order management are handled so transparently",
       rating: 5,
     },
   ];
@@ -575,7 +575,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🎓</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={50} suffix="+" />
+                <AnimatedCounter end={25} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Happy Students</div>
             </motion.div>
@@ -589,7 +589,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🍽️</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={20} suffix="+" />
+                <AnimatedCounter end={10} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Orders Delivered</div>
             </motion.div>
