@@ -227,12 +227,13 @@ router.get('/',
 
       const {
         page = 1,
-        limit = 20,
+        limit = 100, // Increased default limit to 100 to show more items
         category,
         available,
         search,
         sortBy = 'name',
-        sortOrder = 'asc'
+        sortOrder = 'asc',
+        loadAll = 'true' // New param to load all items by default
       } = req.query;
 
       // Build query
@@ -259,27 +260,35 @@ router.get('/',
         ];
       }
 
-      // Calculate pagination
-      const skip = (parseInt(page) - 1) * parseInt(limit);
-
       // Build sort object
       const sort = {};
       sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-      // Execute query with pagination
+      // Execute query - load ALL items by default for menu management
       console.log('🔍 Querying menu items with:', query);
       
-      const menuItems = await MenuItem.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean();
+      let menuItems;
+      let totalPages;
+      const total = await MenuItem.countDocuments(query);
+      
+      if (loadAll === 'true') {
+        // Load all items without pagination for menu management
+        menuItems = await MenuItem.find(query)
+          .sort(sort)
+          .lean();
+        totalPages = 1;
+      } else {
+        // Use pagination if explicitly requested
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        menuItems = await MenuItem.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .lean();
+        totalPages = Math.ceil(total / parseInt(limit));
+      }
 
       console.log(`📊 Found ${menuItems.length} menu items`);
-
-      // Get total count for pagination
-      const total = await MenuItem.countDocuments(query);
-      const totalPages = Math.ceil(total / parseInt(limit));
 
       // Get category statistics
       const categoryStats = await MenuItem.aggregate([
@@ -304,9 +313,10 @@ router.get('/',
           currentPage: parseInt(page),
           totalPages,
           totalItems: total,
-          itemsPerPage: parseInt(limit),
-          hasNextPage: parseInt(page) < totalPages,
-          hasPrevPage: parseInt(page) > 1
+          itemsPerPage: loadAll === 'true' ? total : parseInt(limit),
+          hasNextPage: loadAll === 'true' ? false : parseInt(page) < totalPages,
+          hasPrevPage: loadAll === 'true' ? false : parseInt(page) > 1,
+          loadAll: loadAll === 'true'
         },
         stats: {
           totalItems: total,
