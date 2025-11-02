@@ -321,14 +321,30 @@ const OrderTracking = () => {
   useEffect(() => {
     loadTrackingData();
     loadPaymentData();
-    
-    // Set up polling for real-time updates every 30 seconds
+
+    // Set up polling for real-time updates every 3 minutes, but only when page is visible
     const interval = setInterval(() => {
-      loadTrackingData();
-      loadPaymentData();
-    }, 30000);
-    
-    return () => clearInterval(interval);
+      // Only poll if the page is visible (user is actively viewing it)
+      if (!document.hidden) {
+        loadTrackingData();
+        loadPaymentData();
+      }
+    }, 180000);
+
+    // Also poll immediately when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadTrackingData();
+        loadPaymentData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [id]);
 
   // Show rating modal when order hasn't been rated yet

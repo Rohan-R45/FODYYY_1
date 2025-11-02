@@ -501,13 +501,28 @@ const RestaurantOrders = () => {
 
   useEffect(() => {
     loadOrders();
-    
-    // Set up polling for real-time updates
+
+    // Set up polling for real-time updates every 2 minutes, but only when page is visible
     const interval = setInterval(() => {
-      loadOrders(true); // Silent reload
-    }, 15000); // Poll every 15 seconds
-    
-    return () => clearInterval(interval);
+      // Only poll if the page is visible (user is actively viewing it)
+      if (!document.hidden) {
+        loadOrders(true); // Silent reload
+      }
+    }, 120000);
+
+    // Also poll immediately when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadOrders(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [selectedStatus]);
 
   // Initialize audio for notifications

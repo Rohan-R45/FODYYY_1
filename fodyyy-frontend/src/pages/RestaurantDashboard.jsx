@@ -47,14 +47,27 @@ const RestaurantDashboard = () => {
     if (restaurantId && !requiresSetup) {
       if (typeof restaurantId === 'string' && restaurantId.length === 24 && /^[0-9a-fA-F]{24}$/.test(restaurantId)) {
         loadDashboardData();
-        
+
         const interval = setInterval(() => {
-          if (restaurantId && typeof restaurantId === 'string' && restaurantId.length === 24) {
+          // Only poll if the page is visible (user is actively viewing it)
+          if (!document.hidden && restaurantId && typeof restaurantId === 'string' && restaurantId.length === 24) {
             loadDashboardData();
           }
-        }, 60000);
-        
-        return () => clearInterval(interval);
+        }, 300000); // Poll every 5 minutes
+
+        // Also poll immediately when page becomes visible again
+        const handleVisibilityChange = () => {
+          if (!document.hidden && restaurantId && typeof restaurantId === 'string' && restaurantId.length === 24) {
+            loadDashboardData();
+          }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+          clearInterval(interval);
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
       } else {
         console.error('Invalid restaurant ID format:', restaurantId);
         toast.error('Invalid restaurant ID. Please refresh the page.');

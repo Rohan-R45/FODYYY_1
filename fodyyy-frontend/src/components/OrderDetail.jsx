@@ -19,11 +19,28 @@ const OrderDetailContent = () => {
   useEffect(() => {
     if (id) {
       loadOrderDetails();
-      
-      // Set up polling for real-time updates
-      const interval = setInterval(loadOrderDetails, 30000); // Poll every 30 seconds
-      
-      return () => clearInterval(interval);
+
+      // Set up polling for real-time updates every 3 minutes, but only when page is visible
+      const interval = setInterval(() => {
+        // Only poll if the page is visible (user is actively viewing it)
+        if (!document.hidden) {
+          loadOrderDetails();
+        }
+      }, 180000);
+
+      // Also poll immediately when page becomes visible again
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          loadOrderDetails();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, [id]);
 

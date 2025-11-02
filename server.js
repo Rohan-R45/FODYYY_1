@@ -76,16 +76,24 @@ app.use(
 // --- Rate limiting & speed limits ---
 const generalLimiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS, // default 15 min
-  max: config.RATE_LIMIT_MAX_REQUESTS,   // default 100 reqs
+  max: config.RATE_LIMIT_MAX_REQUESTS,   // default 2500 reqs
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use IP address for rate limiting, but allow authenticated users more requests
+    return req.ip;
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks and static assets
+    return req.path === '/api/health' || req.path.startsWith('/static/');
+  }
 });
 app.use(generalLimiter);
 
 // Stricter auth limiter
 const authLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 min
-  max: 10,
+  max: 150,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -100,12 +108,22 @@ app.use('/api/auth/register', authLimiter, authSpeed);
 // Order creation limiter (POST only)
 const orderLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 min
-  max: 20,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Orders listing limiter (GET requests to prevent excessive polling)
+const ordersListLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 min
+  max: 200, // Allow more frequent order status checks
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/orders', (req, res, next) => {
   if (req.method === 'POST') return orderLimiter(req, res, next);
+  if (req.method === 'GET') return ordersListLimiter(req, res, next);
   next();
 });
 
@@ -154,6 +172,17 @@ function cacheMiddleware(ttlSeconds = 60, keyFn) {
     }
   };
 }
+
+// Restaurant browsing limiter
+const restaurantLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 min
+  max: 500, // Allow frequent restaurant browsing
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/restaurants', restaurantLimiter);
+app.use('/api/menu', restaurantLimiter);
 
 // Apply caching for commonly-hit GET endpoints
 app.use('/api/restaurants', cacheMiddleware(60));
