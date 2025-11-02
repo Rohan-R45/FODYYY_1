@@ -470,6 +470,7 @@ const Register = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+91 XXXXX XXXXX"
+                      maxLength="10"
                       className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
                         errors.phone
                           ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100'
