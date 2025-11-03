@@ -239,7 +239,7 @@ catch (e) { logger.error('Failed to load order routes', { error: e.message, stac
 
 // --- Mount routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/users', usersRoutes);
+app.use('/api/user', usersRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
