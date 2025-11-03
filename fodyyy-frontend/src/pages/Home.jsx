@@ -84,7 +84,7 @@ const FeatureCard = ({ icon, title, description, delay = 0 }) => (
 );
 
 // Restaurant Card Component
-const RestaurantCard = ({ name, cuisine, rating, deliveryTime, image, delay = 0 }) => (
+const RestaurantCard = ({ name, cuisine, rating, deliveryTime, image, isClosed = false, delay = 0 }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
     whileInView={{ opacity: 1, scale: 1 }}
@@ -108,6 +108,15 @@ const RestaurantCard = ({ name, cuisine, rating, deliveryTime, image, delay = 0 
         <span>⚡</span>
         <span>{deliveryTime}</span>
       </div>
+
+      {/* Closed overlay */}
+      {isClosed && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40">
+          <div className="bg-red-500 text-white px-4 py-2 rounded-full font-bold text-lg shadow-lg">
+            CLOSED
+          </div>
+        </div>
+      )}
     </div>
     
     {/* Content */}
@@ -575,7 +584,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🎓</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={25} suffix="+" />
+                <AnimatedCounter end={400} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Happy Students</div>
             </motion.div>
@@ -589,7 +598,7 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🍽️</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={10} suffix="+" />
+                <AnimatedCounter end={50} suffix="+" />
               </div>
               <div className="text-xl text-gray-300">Orders Delivered</div>
             </motion.div>

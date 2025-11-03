@@ -333,7 +333,7 @@ router.put('/profile',
   authorize('restaurant'),
   async (req, res) => {
     try {
-      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange, deliveryCharge } = req.body;
+      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange, deliveryCharge, isClosed } = req.body;
 
       // Find restaurant by owner ID
       let restaurant = await Restaurant.findOne({ ownerId: req.user._id });
@@ -400,6 +400,12 @@ router.put('/profile',
         }
       }
 
+      if (isClosed !== undefined) {
+        if (typeof isClosed !== 'boolean') {
+          errors.push({ field: 'isClosed', message: 'isClosed must be a boolean value' });
+        }
+      }
+
       if (errors.length > 0) {
         return res.status(400).json({
           success: false,
@@ -419,6 +425,7 @@ router.put('/profile',
       if (cuisine !== undefined) updateFields.cuisine = Array.isArray(cuisine) ? cuisine : [cuisine];
       if (priceRange !== undefined) updateFields.priceRange = priceRange;
       if (deliveryCharge !== undefined) updateFields.deliveryCharge = deliveryCharge;
+      if (isClosed !== undefined) updateFields.isClosed = isClosed;
 
       // Update restaurant
       restaurant = await Restaurant.findByIdAndUpdate(

@@ -391,15 +391,26 @@ const RestaurantList = () => {
                         
                         {/* Overlay Badges */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                        {/* Closed overlay */}
+                        {restaurant.isClosed && (
+                          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
+                            <div className="bg-red-500 text-white px-6 py-3 rounded-full font-bold text-lg shadow-lg transform rotate-12">
+                              CLOSED
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Status Badge */}
                         <div className="absolute top-4 left-4">
                           <span className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm ${
-                            restaurant.isActive 
-                              ? 'bg-green-500/90 text-white' 
-                              : 'bg-red-500/90 text-white'
+                            restaurant.isClosed
+                              ? 'bg-red-500/90 text-white'
+                              : restaurant.isActive
+                                ? 'bg-green-500/90 text-white'
+                                : 'bg-gray-500/90 text-white'
                           }`}>
-                            {restaurant.isActive ? '🚀 Fast' : 'Closed'}
+                            {restaurant.isClosed ? '🔒 Closed' : restaurant.isActive ? '🚀 Fast' : '⏸️ Inactive'}
                           </span>
                         </div>
 

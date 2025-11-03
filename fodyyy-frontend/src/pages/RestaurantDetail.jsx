@@ -262,7 +262,17 @@ const RestaurantDetailContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50 relative">
+      {/* Closed overlay */}
+      {restaurant.isClosed && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-red-500 text-white px-8 py-6 rounded-2xl font-bold text-2xl shadow-2xl text-center">
+            <div className="mb-2">🔒</div>
+            Restaurant Currently Closed
+            <div className="text-lg font-normal mt-2">Please check back later</div>
+          </div>
+        </div>
+      )}
       {/* Banner + Info */}
       <div className="bg-white shadow-md">
         <div className="max-w-3xl mx-auto">
@@ -337,15 +347,19 @@ const RestaurantDetailContent = () => {
                 </motion.div>
               )}
 
-              {/* Open Status Badge */}
-              <motion.span 
+              {/* Status Badge */}
+              <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.2 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold shadow-md"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold shadow-md ${
+                  restaurant.isClosed
+                    ? 'bg-gradient-to-r from-red-500 to-red-600'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                }`}
               >
                 <Clock className="w-3.5 h-3.5" />
-                Open
+                {restaurant.isClosed ? 'Closed' : 'Open'}
               </motion.span>
 
               {/* Phone */}
@@ -412,6 +426,9 @@ const RestaurantDetailContent = () => {
                     {item.isAvailable === false && (
                       <div className="text-xs text-red-600 mt-2 font-medium">Currently unavailable</div>
                     )}
+                    {restaurant.isClosed && (
+                      <div className="text-xs text-red-600 mt-2 font-medium">Restaurant is currently closed</div>
+                    )}
                   </div>
 
                   <div className="w-28 shrink-0">
@@ -425,7 +442,7 @@ const RestaurantDetailContent = () => {
                       )}
                     </div>
                     <div className="mt-2 flex justify-end">
-                      {item.isAvailable !== false ? (
+                      {item.isAvailable !== false && !restaurant.isClosed ? (
                         qty > 0 ? (
                           <motion.div 
                             initial={{ scale: 0.8 }}

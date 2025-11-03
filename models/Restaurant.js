@@ -70,6 +70,10 @@ const restaurantSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isClosed: {
+    type: Boolean,
+    default: false
+  },
   deliveryTime: {
     type: String,
     default: '30-45 mins',

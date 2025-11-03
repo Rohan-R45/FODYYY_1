@@ -20,7 +20,8 @@ const RestaurantProfile = () => {
     email: '',
     image: '',
     deliveryCharge: 0,
-    cuisineTypes: []
+    cuisineTypes: [],
+    isClosed: false
   });
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -48,7 +49,8 @@ const RestaurantProfile = () => {
           email: data.email || user?.email || '',
           image: data.image || '',
           deliveryCharge: typeof data.deliveryCharge === 'number' ? data.deliveryCharge : 0,
-          cuisineTypes: data.cuisine || []
+          cuisineTypes: data.cuisine || [],
+          isClosed: data.isClosed || false
         });
         
         if (data.image) {
@@ -403,6 +405,48 @@ const RestaurantProfile = () => {
                 <p className="mt-2 text-sm text-gray-600">
                   Set the delivery charge for orders from your restaurant. Use 0 for free delivery.
                 </p>
+              </div>
+            </div>
+
+            {/* Restaurant Status */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Restaurant Status</h3>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Restaurant Status</h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {formData.isClosed ? 'Currently closed - customers cannot place orders' : 'Currently open - accepting orders'}
+                  </p>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isClosed}
+                    onChange={(e) => handleInputChange('isClosed', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className={`relative w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600`}>
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-900">
+                    {formData.isClosed ? 'Closed' : 'Open'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className={`w-2 h-2 rounded-full mt-2 ${formData.isClosed ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      {formData.isClosed
+                        ? 'Your restaurant is marked as closed. Customers will see a "Closed" badge and cannot place orders.'
+                        : 'Your restaurant is open for business. Customers can browse your menu and place orders.'
+                      }
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
