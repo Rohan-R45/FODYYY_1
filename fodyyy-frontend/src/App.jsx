@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { RestaurantProvider } from './context/RestaurantContext';
 import { RatingProvider } from './context/RatingContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BottomNavigation from './components/BottomNavigation';
@@ -98,9 +99,10 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <RestaurantProvider>
-          <CartProvider>
-            <RatingProvider>
+        <NotificationProvider>
+          <RestaurantProvider>
+            <CartProvider>
+              <RatingProvider>
               <Router>
                 <ScrollToTop />
                 <div className="App min-h-screen">
@@ -302,6 +304,7 @@ function App() {
             </RatingProvider>
           </CartProvider>
         </RestaurantProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

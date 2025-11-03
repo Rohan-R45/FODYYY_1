@@ -1,6 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from 'firebase/app';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -31,6 +32,29 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Initialize Firebase Cloud Messaging
+let messaging = null;
+let fcmSupported = false;
+
+// Check if FCM is supported and initialize
+const initializeMessaging = async () => {
+  try {
+    fcmSupported = await isSupported();
+    if (fcmSupported) {
+      messaging = getMessaging(app);
+      console.log('✅ Firebase Cloud Messaging initialized');
+    } else {
+      console.log('ℹ️ Firebase Cloud Messaging not supported in this browser');
+    }
+  } catch (error) {
+    console.log('ℹ️ Firebase Cloud Messaging initialization failed:', error.message);
+    fcmSupported = false;
+  }
+};
+
+// Initialize messaging on module load
+initializeMessaging();
 
 // Store recaptcha verifier
 let recaptchaVerifier = null;
@@ -289,6 +313,217 @@ export const clearRecaptcha = () => {
     }
     recaptchaVerifier = null;
   }
+};
+
+/**
+ * Request permission for push notifications and get FCM token
+ * @returns {Promise<object>} - Result with success status and token
+ */
+export const requestNotificationPermission = async () => {
+  try {
+    if (!fcmSupported || !messaging) {
+      return {
+        success: false,
+        error: 'Firebase Cloud Messaging is not supported in this browser'
+      };
+    }
+
+    // Request permission
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      return {
+        success: false,
+        error: 'Notification permission denied'
+      };
+    }
+
+    // Get FCM token
+    const token = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+    });
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Failed to get FCM token'
+      };
+    }
+
+    console.log('✅ FCM token obtained:', token);
+
+    return {
+      success: true,
+      token: token,
+      permission: permission
+    };
+
+  } catch (error) {
+    console.error('❌ Error requesting notification permission:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Listen for incoming push messages
+ * @param {function} callback - Callback function to handle incoming messages
+ * @returns {function} - Unsubscribe function
+ */
+export const onMessageListener = (callback) => {
+  if (!fcmSupported || !messaging) {
+    console.log('ℹ️ FCM not supported, cannot listen for messages');
+    return () => {};
+  }
+
+  try {
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('📨 Message received:', payload);
+
+      // Play notification sound if enabled
+      if (payload.notification && payload.data?.soundEnabled !== 'false') {
+        playNotificationSound();
+      }
+
+      // Call the callback with the message data
+      if (callback) {
+        callback(payload);
+      }
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('❌ Error setting up message listener:', error);
+    return () => {};
+  }
+};
+
+/**
+ * Register FCM token with the backend
+ * @param {string} token - FCM token
+ * @param {string} deviceId - Device identifier
+ * @returns {Promise<object>} - API response
+ */
+export const registerFCMToken = async (token, deviceId) => {
+  try {
+    const response = await fetch('/api/auth/register-fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        token,
+        deviceId,
+        deviceType: 'web'
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('✅ FCM token registered with backend');
+      return { success: true, data };
+    } else {
+      console.error('❌ Failed to register FCM token:', data.message);
+      return { success: false, error: data.message };
+    }
+
+  } catch (error) {
+    console.error('❌ Error registering FCM token:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Unregister FCM token from the backend
+ * @param {string} deviceId - Device identifier
+ * @returns {Promise<object>} - API response
+ */
+export const unregisterFCMToken = async (deviceId) => {
+  try {
+    const response = await fetch('/api/auth/unregister-fcm-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        deviceId
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('✅ FCM token unregistered from backend');
+      return { success: true, data };
+    } else {
+      console.error('❌ Failed to unregister FCM token:', data.message);
+      return { success: false, error: data.message };
+    }
+
+  } catch (error) {
+    console.error('❌ Error unregistering FCM token:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Update notification preferences
+ * @param {object} preferences - Notification preferences
+ * @returns {Promise<object>} - API response
+ */
+export const updateNotificationPreferences = async (preferences) => {
+  try {
+    const response = await fetch('/api/auth/notification-preferences', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(preferences)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('✅ Notification preferences updated');
+      return { success: true, data };
+    } else {
+      console.error('❌ Failed to update notification preferences:', data.message);
+      return { success: false, error: data.message };
+    }
+
+  } catch (error) {
+    console.error('❌ Error updating notification preferences:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Play notification sound
+ */
+const playNotificationSound = () => {
+  try {
+    const audio = new Audio('/sounds/mixkit-software-interface-back-2575.wav');
+    audio.volume = 0.5;
+    audio.play().catch(error => {
+      console.log('Could not play notification sound:', error);
+    });
+  } catch (error) {
+    console.log('Notification sound not available');
+  }
+};
+
+/**
+ * Check if FCM is supported
+ * @returns {boolean} - Whether FCM is supported
+ */
+export const isFCMSupported = () => {
+  return fcmSupported;
 };
 
 // Export Firebase app and auth

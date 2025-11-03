@@ -2,6 +2,7 @@ const express = require('express');
 const { Order, User, Restaurant, MenuItem } = require('../models');
 const { protect, authorize } = require('../middleware/auth');
 const { createValidator } = require('../middleware/validation');
+const { sendNewOrderNotification, sendOrderStatusNotification } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -765,6 +766,19 @@ router.post('/',
 
       console.log(`✅ Order placed: ${orderNumber} by ${req.user.email} at ${restaurant.name}`);
 
+      // Send notification to restaurant owner (don't wait for it to complete)
+      sendNewOrderNotification(order._id, restaurantId, req.user._id)
+        .then(notificationResult => {
+          if (notificationResult.success) {
+            console.log(`📱 Notification sent to restaurant owner: ${notificationResult.successCount} devices`);
+          } else {
+            console.log(`📱 Notification failed: ${notificationResult.error}`);
+          }
+        })
+        .catch(error => {
+          console.error('📱 Error sending notification:', error);
+        });
+
       // Ensure response includes explicit monetary breakdown and final total
       const formatted = formatOrderResponse(order, 'student');
       res.status(201).json({
@@ -1105,6 +1119,19 @@ router.put('/:id/status',
       await order.save();
 
       console.log(`✅ Order status updated: ${order.orderNumber} -> ${status} by ${req.user.email}`);
+
+      // Send status update notification to student (don't wait for it to complete)
+      sendOrderStatusNotification(order._id, order.restaurantId, status)
+        .then(notificationResult => {
+          if (notificationResult.success) {
+            console.log(`📱 Status update notification sent: ${notificationResult.successCount} devices`);
+          } else {
+            console.log(`📱 Status update notification failed: ${notificationResult.error}`);
+          }
+        })
+        .catch(error => {
+          console.error('📱 Error sending status update notification:', error);
+        });
 
       res.json({
         success: true,

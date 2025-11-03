@@ -220,7 +220,7 @@ connectDB();
 
 // --- Load routes with error protection ---
 logger.info('Loading routes...');
-let authRoutes, usersRoutes, restaurantRoutes, menuRoutes, orderRoutes;
+let authRoutes, usersRoutes, restaurantRoutes, menuRoutes, orderRoutes, notificationRoutes;
 
 try { authRoutes = require('./routes/auth'); logger.info('Auth routes loaded'); } 
 catch (e) { logger.error('Failed to load auth routes', { error: e.message, stack: e.stack }); process.exit(1); }
@@ -234,11 +234,15 @@ catch (e) { logger.error('Failed to load restaurant routes', { error: e.message,
 try { menuRoutes = require('./routes/menu'); logger.info('Menu routes loaded'); } 
 catch (e) { logger.error('Failed to load menu routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
-try { orderRoutes = require('./routes/orders'); logger.info('Order routes loaded'); } 
+try { orderRoutes = require('./routes/orders'); logger.info('Order routes loaded'); }
 catch (e) { logger.error('Failed to load order routes', { error: e.message, stack: e.stack }); process.exit(1); }
+
+try { notificationRoutes = require('./routes/notifications'); logger.info('Notification routes loaded'); }
+catch (e) { logger.error('Failed to load notification routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
 // --- Mount routes ---
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', notificationRoutes); // Mount notification routes under /api/auth
 app.use('/api/user', usersRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);

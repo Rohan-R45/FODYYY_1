@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import restaurantService from '../services/restaurantService';
 import ImageInput from '../components/ImageInput';
+import NotificationPreferences from '../components/NotificationPreferences';
 import toast from 'react-hot-toast';
 
 const RestaurantProfile = () => {
@@ -449,6 +450,9 @@ const RestaurantProfile = () => {
                 </div>
               </div>
             </div>
+
+            {/* Notification Preferences */}
+            <NotificationPreferences />
 
             {/* Submit Button */}
             <div className="flex items-center justify-end gap-4">
