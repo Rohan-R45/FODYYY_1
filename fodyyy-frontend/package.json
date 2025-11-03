@@ -16,10 +16,12 @@
     "preview:5175": "vite preview --port 5175",
     "clean": "rm -rf dist",
     "postbuild": "echo 'Frontend build complete'"
+     
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "axios": "^1.10.0",
+    "firebase": "^12.5.0",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.544.0",
     "qrcode": "^1.5.4",
@@ -44,5 +46,6 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "vite": "^6.3.5"
+   
   }
 }

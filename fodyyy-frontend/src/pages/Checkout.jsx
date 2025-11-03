@@ -8,6 +8,7 @@ import { formatCurrency } from '../utils/helpers';
 import orderService from '../services/orderService';
 import RatingModal from '../components/RatingModal';
 import RatingDisplay from '../components/RatingDisplay';
+import OTPVerificationModal from '../components/OTPVerificationModal';
 import toast from 'react-hot-toast';
 
 const Checkout = () => {
@@ -32,6 +33,8 @@ const Checkout = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [verifiedPhoneNumber, setVerifiedPhoneNumber] = useState('');
 
   // Load user data on mount
   useEffect(() => {
@@ -125,9 +128,31 @@ const Checkout = () => {
     return true;
   };
 
-  const handlePlaceOrder = async () => {
+  // Handle OTP verification success
+  const handleOTPVerificationSuccess = async (verifiedPhone) => {
+    setVerifiedPhoneNumber(verifiedPhone);
+    setShowOTPModal(false);
+
+    // Now place the order with verified phone number
+    await placeOrderWithVerifiedPhone(verifiedPhone);
+  };
+
+  // Handle OTP modal close (user cancelled verification)
+  const handleOTPModalClose = () => {
+    setShowOTPModal(false);
+    toast.info('Order verification cancelled. Please try again when ready.');
+  };
+
+  // Modified to show OTP modal instead of placing order immediately
+  const handlePlaceOrder = () => {
     if (!validateForm()) return;
 
+    // Show OTP verification modal
+    setShowOTPModal(true);
+  };
+
+  // Actually place the order after OTP verification
+  const placeOrderWithVerifiedPhone = async (verifiedPhone) => {
     setIsLoading(true);
     try {
       // Format delivery address as a single string
@@ -146,19 +171,19 @@ const Checkout = () => {
           specialInstructions: item.specialInstructions || ''
         })),
         deliveryAddress: formattedAddress,
-        phoneNumber,
+        phoneNumber: verifiedPhone, // Use verified phone number
         paymentMethod,
         specialInstructions: deliveryAddress.instructions || ''
       };
 
       const response = await orderService.createOrder(orderData);
-      
+
       if (response.success) {
         setOrderDetails(response.data);
         setOrderPlaced(true);
         clearCart();
         setTimeout(() => setShowCelebration(true), 400);
-        
+
         if (paymentMethod === 'upi') {
           setShowPaymentModal(true);
         } else {
@@ -463,6 +488,14 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      {/* OTP Verification Modal */}
+      <OTPVerificationModal
+        isOpen={showOTPModal}
+        onClose={handleOTPModalClose}
+        onVerificationSuccess={handleOTPVerificationSuccess}
+        phoneNumber={phoneNumber}
+      />
     </div>
   );
 };
