@@ -248,7 +248,7 @@ const Home = () => {
     {
       name: 'Tasty Tales',
       cuisine: '🥘 South Indian',
-      rating: 4.9,
+      rating: 4.5,
       deliveryTime: '20-25 min',
       image: 'https://images.unsplash.com/photo-1630383249896-424e482df921?w=500&h=300&fit=crop',
     },
@@ -584,9 +584,9 @@ const Home = () => {
             >
               <div className="text-6xl mb-4">🎓</div>
               <div className="text-5xl font-extrabold mb-2 bg-gradient-to-r from-foody-accent to-foody-secondary bg-clip-text text-transparent">
-                <AnimatedCounter end={400} suffix="+" />
+                <AnimatedCounter end={450} suffix="+" />
               </div>
-              <div className="text-xl text-gray-300">Happy Students</div>
+              <div className="text-xl text-gray-300">Students Registered</div>
             </motion.div>
 
             <motion.div
