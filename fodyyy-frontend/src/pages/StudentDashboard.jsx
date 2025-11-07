@@ -428,7 +428,7 @@ const StudentDashboard = () => {
                       <div className="flex flex-col items-end gap-3">
                         <div className="text-right">
                           <p className="text-2xl font-bold text-gray-900">
-                            {formatCurrency((typeof order.total === 'number') ? order.total : (order.subtotal + (order.deliveryFee || 0) + (order.tax || 0) - (typeof order.discount === 'number' ? order.discount : (order?.discount?.amount || 0))))}
+                            {formatCurrency(order.totalAmount ?? order.total ?? 0)}
                           </p>
                           <p className="text-sm text-orange-600 font-medium">
                             View Details →

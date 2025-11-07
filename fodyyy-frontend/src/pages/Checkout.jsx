@@ -61,31 +61,55 @@ const Checkout = () => {
 
   const cartRestaurant = getCartRestaurant();
   const subtotal = getCartTotal();
-  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [restaurantCharges, setRestaurantCharges] = useState({
+    deliveryCharge: 0,
+    gstPercentage: 5,
+    packingCharge: 0,
+    platformFee: 5
+  });
   const [restaurantName, setRestaurantName] = useState('');
 
   useEffect(() => {
-    const fetchDeliveryCharge = async () => {
+    const fetchRestaurantCharges = async () => {
       try {
         if (!cartRestaurant?.id) return;
         const resp = await (await import('../services/restaurantService')).default.getRestaurantById(cartRestaurant.id);
         if (resp?.success && resp?.data?.restaurant) {
-          const charge = typeof resp.data.restaurant.deliveryCharge === 'number' 
-            ? resp.data.restaurant.deliveryCharge 
-            : 0;
-          setDeliveryCharge(charge);
+          setRestaurantCharges({
+            deliveryCharge: typeof resp.data.restaurant.deliveryCharge === 'number'
+              ? resp.data.restaurant.deliveryCharge
+              : 0,
+            gstPercentage: typeof resp.data.restaurant.gstPercentage === 'number'
+              ? resp.data.restaurant.gstPercentage
+              : 5,
+            packingCharge: typeof resp.data.restaurant.packingCharge === 'number'
+              ? resp.data.restaurant.packingCharge
+              : 0,
+            platformFee: typeof resp.data.restaurant.platformFee === 'number'
+              ? resp.data.restaurant.platformFee
+              : 5
+          });
           setRestaurantName(resp.data.restaurant.name || '');
         }
       } catch (e) {
-        setDeliveryCharge(0);
+        setRestaurantCharges({
+          deliveryCharge: 0,
+          gstPercentage: 5,
+          packingCharge: 0,
+          platformFee: 5
+        });
       }
     };
 
-    fetchDeliveryCharge();
+    fetchRestaurantCharges();
   }, [cartRestaurant?.id]);
 
-  const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
-  const total = subtotal + deliveryFee;
+  // Calculate all charges
+  const deliveryFee = subtotal > 0 ? restaurantCharges.deliveryCharge : 0;
+  const packingFee = subtotal > 0 ? restaurantCharges.packingCharge : 0;
+  const platformFee = subtotal > 0 ? restaurantCharges.platformFee : 0;
+  const gstAmount = subtotal > 0 ? (subtotal * restaurantCharges.gstPercentage) / 100 : 0;
+  const total = subtotal + deliveryFee + packingFee + platformFee + gstAmount;
 
   const handleAddressChange = (field, value) => {
     setDeliveryAddress(prev => ({
@@ -444,23 +468,42 @@ const Checkout = () => {
                 </div>
                 
                 <div className="p-6 border-t border-gray-100 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Bill Summary</h3>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Item Total</span>
+                      <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Delivery Charge</span>
+                      <span className={deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}>
+                        {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Packing Charge</span>
+                      <span className={packingFee === 0 ? 'text-green-600' : 'text-gray-900'}>
+                        {packingFee === 0 ? 'FREE' : formatCurrency(packingFee)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Platform Fee</span>
+                      <span className="text-gray-900">{formatCurrency(platformFee)}</span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">GST ({restaurantCharges.gstPercentage}%)</span>
+                      <span className="text-gray-900">{formatCurrency(gstAmount)}</span>
+                    </div>
                   </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">
-                      Delivery {restaurantName && <span className="text-xs text-gray-500">from {restaurantName}</span>}
-                    </span>
-                    <span className={deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}>
-                      {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
-                    </span>
-                  </div>
-                  
+
                   <div className="flex justify-between text-lg font-semibold pt-3 border-t border-gray-200">
-                    <span className="text-gray-900">Total</span>
-                    <span className="text-gray-900">{formatCurrency(total)}</span>
+                    <span className="text-gray-900">Total Amount</span>
+                    <span className="text-orange-600">{formatCurrency(total)}</span>
                   </div>
                   
                   <button
@@ -795,25 +838,39 @@ const OrderConfirmation = ({ orderDetails, showPaymentModal, setShowPaymentModal
                 </div>
 
                 <div className="border border-[#FFE8D6] rounded-2xl p-4 bg-white/80 shadow-sm">
-                  <div className="flex items-center justify-between text-[#6B7280] text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(orderDetails.subtotal ?? orderDetails.total)}</span>
-                  </div>
-                  {typeof orderDetails.deliveryFee === 'number' && (
-                    <div className="mt-2 flex items-center justify-between text-[#6B7280] text-sm">
-                      <span>Delivery Fee</span>
-                      <span>{formatCurrency(orderDetails.deliveryFee)}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Item Total</span>
+                      <span>{formatCurrency(orderDetails.itemTotal || orderDetails.subtotal || orderDetails.total)}</span>
                     </div>
-                  )}
-                  {typeof orderDetails.discount === 'number' && orderDetails.discount > 0 && (
-                    <div className="mt-2 flex items-center justify-between text-[#6B7280] text-sm">
-                      <span>Discounts</span>
-                      <span>-{formatCurrency(orderDetails.discount)}</span>
+                    <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Delivery Charge</span>
+                      <span>{formatCurrency(orderDetails.deliveryCharge || 0)}</span>
                     </div>
-                  )}
-                  <div className="mt-4 flex items-center justify-between text-lg font-extrabold text-[#FF6B35]">
-                    <span>Total Paid</span>
-                    <span>{formatCurrency(orderDetails.total)}</span>
+                    <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Packing Charge</span>
+                      <span>{formatCurrency(orderDetails.packingCharge || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>Platform Fee</span>
+                      <span>{formatCurrency(orderDetails.platformFee || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                      <span>GST ({orderDetails.gstPercentage || 5}%)</span>
+                      <span>{formatCurrency(orderDetails.gstAmount || 0)}</span>
+                    </div>
+                    {typeof orderDetails.discount === 'number' && orderDetails.discount > 0 && (
+                      <div className="flex items-center justify-between text-[#6B7280] text-sm">
+                        <span>Discount</span>
+                        <span className="text-green-600">-{formatCurrency(orderDetails.discount)}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-[#FFE8D6] pt-2 mt-2">
+                      <div className="flex items-center justify-between text-lg font-extrabold text-[#FF6B35]">
+                        <span>Total Paid</span>
+                        <span>{formatCurrency(orderDetails.totalAmount || orderDetails.total)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

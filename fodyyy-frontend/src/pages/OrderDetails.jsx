@@ -394,16 +394,24 @@ const OrderDetailsContent = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-900">{formatCurrency(typeof order?.subtotal === 'number' ? order.subtotal : computedSubtotal)}</span>
+                  <span className="text-gray-600">Item Total</span>
+                  <span className="text-gray-900">{formatCurrency((typeof order?.itemTotal === 'number' && order.itemTotal > 0) ? order.itemTotal : (typeof order?.subtotal === 'number' ? order.subtotal : computeSubtotal(order?.items || [])))}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery Fee</span>
-                  <span className="text-gray-900">{formatCurrency(deliveryFeeNum)}</span>
+                  <span className="text-gray-600">Delivery Charge</span>
+                  <span className="text-gray-900">{formatCurrency(typeof order?.deliveryCharge === 'number' ? order.deliveryCharge : deliveryFeeNum)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="text-gray-900">{formatCurrency(taxNum)}</span>
+                  <span className="text-gray-600">Packing Charge</span>
+                  <span className="text-gray-900">{formatCurrency(order?.packingCharge || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Platform Fee</span>
+                  <span className="text-gray-900">{formatCurrency(order?.platformFee || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">GST ({order?.gstPercentage || 5}%)</span>
+                  <span className="text-gray-900">{formatCurrency(typeof order?.gstAmount === 'number' ? order.gstAmount : taxNum)}</span>
                 </div>
                 {discountNum > 0 && (
                   <div className="flex justify-between text-sm">
@@ -414,7 +422,7 @@ const OrderDetailsContent = () => {
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-900">Total</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(computedTotal)}</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(typeof order?.totalAmount === 'number' ? order.totalAmount : computedTotal)}</span>
                   </div>
                 </div>
               </div>

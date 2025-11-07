@@ -333,7 +333,7 @@ router.put('/profile',
   authorize('restaurant'),
   async (req, res) => {
     try {
-      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange, deliveryCharge, isClosed } = req.body;
+      const { name, description, address, phone, image, deliveryTime, cuisine, priceRange, deliveryCharge, gstPercentage, packingCharge, platformFee, isClosed } = req.body;
 
       // Find restaurant by owner ID
       let restaurant = await Restaurant.findOne({ ownerId: req.user._id });
@@ -400,6 +400,36 @@ router.put('/profile',
         }
       }
 
+      if (gstPercentage !== undefined) {
+        if (typeof gstPercentage !== 'number') {
+          errors.push({ field: 'gstPercentage', message: 'GST percentage must be a number' });
+        } else if (gstPercentage < 0 || gstPercentage > 18) {
+          errors.push({ field: 'gstPercentage', message: 'GST percentage must be between 0% and 18%' });
+        } else if (!Number.isFinite(gstPercentage)) {
+          errors.push({ field: 'gstPercentage', message: 'GST percentage must be a valid number' });
+        }
+      }
+
+      if (packingCharge !== undefined) {
+        if (typeof packingCharge !== 'number') {
+          errors.push({ field: 'packingCharge', message: 'Packing charge must be a number' });
+        } else if (packingCharge < 0) {
+          errors.push({ field: 'packingCharge', message: 'Packing charge cannot be negative' });
+        } else if (!Number.isFinite(packingCharge)) {
+          errors.push({ field: 'packingCharge', message: 'Packing charge must be a valid number' });
+        }
+      }
+
+      if (platformFee !== undefined) {
+        if (typeof platformFee !== 'number') {
+          errors.push({ field: 'platformFee', message: 'Platform fee must be a number' });
+        } else if (platformFee < 0) {
+          errors.push({ field: 'platformFee', message: 'Platform fee cannot be negative' });
+        } else if (!Number.isFinite(platformFee)) {
+          errors.push({ field: 'platformFee', message: 'Platform fee must be a valid number' });
+        }
+      }
+
       if (isClosed !== undefined) {
         if (typeof isClosed !== 'boolean') {
           errors.push({ field: 'isClosed', message: 'isClosed must be a boolean value' });
@@ -425,6 +455,9 @@ router.put('/profile',
       if (cuisine !== undefined) updateFields.cuisine = Array.isArray(cuisine) ? cuisine : [cuisine];
       if (priceRange !== undefined) updateFields.priceRange = priceRange;
       if (deliveryCharge !== undefined) updateFields.deliveryCharge = deliveryCharge;
+      if (gstPercentage !== undefined) updateFields.gstPercentage = gstPercentage;
+      if (packingCharge !== undefined) updateFields.packingCharge = packingCharge;
+      if (platformFee !== undefined) updateFields.platformFee = platformFee;
       if (isClosed !== undefined) updateFields.isClosed = isClosed;
 
       // Update restaurant

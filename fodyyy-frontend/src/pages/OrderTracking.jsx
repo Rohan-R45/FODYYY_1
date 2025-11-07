@@ -217,30 +217,42 @@ const OrderDetailsCard = ({ order, restaurant, items }) => (
 
         <div className="mt-6 space-y-2">
           <div className="flex items-center justify-between text-sm text-[#6B7280]">
-            <span>Subtotal</span>
-            <span>{formatCurrency(order.subtotal ?? order.total)}</span>
+            <span>Item Total</span>
+            <span>{formatCurrency(order.itemTotal ?? order.subtotal ?? order.total)}</span>
           </div>
-          {typeof order.deliveryFee === 'number' && (
+          {typeof (order.deliveryCharge ?? order.deliveryFee) === 'number' && (
             <div className="flex items-center justify-between text-sm text-[#6B7280]">
-              <span>Delivery Fee</span>
-              <span>{formatCurrency(order.deliveryFee)}</span>
+              <span>Delivery Charge</span>
+              <span>{formatCurrency(order.deliveryCharge ?? order.deliveryFee)}</span>
             </div>
           )}
-          {typeof order.tax === 'number' && order.tax > 0 && (
+          {typeof order.packingCharge === 'number' && order.packingCharge > 0 && (
             <div className="flex items-center justify-between text-sm text-[#6B7280]">
-              <span>Tax</span>
-              <span>{formatCurrency(order.tax)}</span>
+              <span>Packing Charge</span>
+              <span>{formatCurrency(order.packingCharge)}</span>
             </div>
           )}
-          {typeof order.discount === 'number' && order.discount > 0 && (
+          {typeof order.platformFee === 'number' && order.platformFee > 0 && (
+            <div className="flex items-center justify-between text-sm text-[#6B7280]">
+              <span>Platform Fee</span>
+              <span>{formatCurrency(order.platformFee)}</span>
+            </div>
+          )}
+          {typeof (order.gstAmount ?? order.tax) === 'number' && (order.gstAmount ?? order.tax) > 0 && (
+            <div className="flex items-center justify-between text-sm text-[#6B7280]">
+              <span>GST ({order.gstPercentage ?? 5}%)</span>
+              <span>{formatCurrency(order.gstAmount ?? order.tax)}</span>
+            </div>
+          )}
+          {typeof (order.discount?.amount ?? order.discount) === 'number' && (order.discount?.amount ?? order.discount) > 0 && (
             <div className="flex items-center justify-between text-sm text-[#6B7280]">
               <span>Discount</span>
-              <span>-{formatCurrency(order.discount)}</span>
+              <span>-{formatCurrency(order.discount?.amount ?? order.discount)}</span>
             </div>
           )}
           <div className="pt-3 flex items-center justify-between text-lg font-bold text-[#FF6B35] border-t border-[#FFE8D6]">
             <span>Total</span>
-            <span>{formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.subtotal || order.totalAmount || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}</span>
+            <span>{formatCurrency(order.totalAmount ?? order.total ?? 0)}</span>
           </div>
         </div>
       </div>

@@ -160,6 +160,43 @@ const restaurantSchema = new mongoose.Schema({
       message: 'Delivery charge must be a valid number'
     }
   },
+
+  gstPercentage: {
+    type: Number,
+    default: 5, // 5% GST
+    min: [0, 'GST percentage cannot be negative'],
+    max: [18, 'GST percentage cannot exceed 18%'],
+    validate: {
+      validator: function(v) {
+        return Number.isFinite(v) && v >= 0 && v <= 18;
+      },
+      message: 'GST percentage must be between 0% and 18%'
+    }
+  },
+
+  packingCharge: {
+    type: Number,
+    default: 0, // ₹0 packing charge
+    min: [0, 'Packing charge cannot be negative'],
+    validate: {
+      validator: function(v) {
+        return Number.isFinite(v);
+      },
+      message: 'Packing charge must be a valid number'
+    }
+  },
+
+  platformFee: {
+    type: Number,
+    default: 5, // ₹5 platform fee
+    min: [0, 'Platform fee cannot be negative'],
+    validate: {
+      validator: function(v) {
+        return Number.isFinite(v);
+      },
+      message: 'Platform fee must be a valid number'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

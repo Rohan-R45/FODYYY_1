@@ -29,7 +29,12 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [restaurantCharges, setRestaurantCharges] = useState({
+    deliveryCharge: 0,
+    gstPercentage: 5,
+    packingCharge: 0,
+    platformFee: 5
+  });
 
   // Filter cart items for current restaurant if restaurantId is provided
   const relevantItems = restaurantId 
@@ -39,27 +44,46 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
   const subtotal = relevantItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   useEffect(() => {
-    const fetchDeliveryCharge = async () => {
+    const fetchRestaurantCharges = async () => {
       try {
         const restId = restaurantId || (relevantItems[0]?.restaurantId);
         if (!restId) return;
         const resp = await (await import('../services/restaurantService')).default.getRestaurantById(restId);
         if (resp?.success && resp?.data?.restaurant) {
-          const charge = typeof resp.data.restaurant.deliveryCharge === 'number' 
-            ? resp.data.restaurant.deliveryCharge 
-            : 0;
-          setDeliveryCharge(charge);
+          setRestaurantCharges({
+            deliveryCharge: typeof resp.data.restaurant.deliveryCharge === 'number'
+              ? resp.data.restaurant.deliveryCharge
+              : 0,
+            gstPercentage: typeof resp.data.restaurant.gstPercentage === 'number'
+              ? resp.data.restaurant.gstPercentage
+              : 5,
+            packingCharge: typeof resp.data.restaurant.packingCharge === 'number'
+              ? resp.data.restaurant.packingCharge
+              : 0,
+            platformFee: typeof resp.data.restaurant.platformFee === 'number'
+              ? resp.data.restaurant.platformFee
+              : 5
+          });
         }
       } catch {
-        setDeliveryCharge(0);
+        setRestaurantCharges({
+          deliveryCharge: 0,
+          gstPercentage: 5,
+          packingCharge: 0,
+          platformFee: 5
+        });
       }
     };
-    fetchDeliveryCharge();
+    fetchRestaurantCharges();
   }, [restaurantId, relevantItems.length]);
 
-  const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
+  // Calculate all charges
+  const deliveryFee = subtotal > 0 ? restaurantCharges.deliveryCharge : 0;
+  const packingFee = subtotal > 0 ? restaurantCharges.packingCharge : 0;
+  const platformFee = subtotal > 0 ? restaurantCharges.platformFee : 0;
+  const gstAmount = subtotal > 0 ? (subtotal * restaurantCharges.gstPercentage) / 100 : 0;
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
-  const total = subtotal + deliveryFee - discount;
+  const total = subtotal + deliveryFee + packingFee + platformFee + gstAmount - discount;
 
   const handleApplyCoupon = () => {
     if (couponCode.toLowerCase() === 'save10') {
@@ -277,19 +301,39 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
                   {/* Bill Details */}
                   <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                     <h4 className="font-bold text-gray-900 mb-3">Bill Details</h4>
-                    
+
                     {/* Item Total */}
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Item Total</span>
                       <span className="text-gray-900 font-medium">{formatCurrency(subtotal)}</span>
                     </div>
 
-                    {/* Delivery Fee */}
+                    {/* Delivery Charge */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Delivery Fee</span>
+                      <span className="text-gray-600">Delivery Charge</span>
                       <span className={`font-medium ${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
                         {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
                       </span>
+                    </div>
+
+                    {/* Packing Charge */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Packing Charge</span>
+                      <span className={`font-medium ${packingFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                        {packingFee === 0 ? 'FREE' : formatCurrency(packingFee)}
+                      </span>
+                    </div>
+
+                    {/* Platform Fee */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Platform Fee</span>
+                      <span className="text-gray-900 font-medium">{formatCurrency(platformFee)}</span>
+                    </div>
+
+                    {/* GST */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">GST ({restaurantCharges.gstPercentage}%)</span>
+                      <span className="text-gray-900 font-medium">{formatCurrency(gstAmount)}</span>
                     </div>
 
                     {/* Discount */}
@@ -305,8 +349,6 @@ const CartSidebar = ({ isOpen, onClose, restaurantId }) => {
                       <span className="text-gray-900">Total</span>
                       <span className="text-orange-600">{formatCurrency(total)}</span>
                     </div>
-
-
                   </div>
 
                   {/* Delivery Address */}

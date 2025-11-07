@@ -64,6 +64,11 @@ const orderSchema = new mongoose.Schema({
     required: [true, 'Total amount is required'],
     min: [0, 'Total amount cannot be negative']
   },
+  itemTotal: {
+    type: Number,
+    required: [true, 'Item total is required'],
+    min: [0, 'Item total cannot be negative']
+  },
   status: {
     type: String,
     enum: {
@@ -175,10 +180,36 @@ const orderSchema = new mongoose.Schema({
       message: 'Actual delivery time must be after order date'
     }
   },
-  deliveryFee: {
+  deliveryCharge: {
     type: Number,
     default: 0,
-    min: [0, 'Delivery fee cannot be negative']
+    min: [0, 'Delivery charge cannot be negative']
+  },
+
+  // Restaurant-specific charges (store at order time)
+  gstPercentage: {
+    type: Number,
+    required: true,
+    min: [0, 'GST percentage cannot be negative'],
+    max: [18, 'GST percentage cannot exceed 18%']
+  },
+
+  gstAmount: {
+    type: Number,
+    required: true,
+    min: [0, 'GST amount cannot be negative']
+  },
+
+  packingCharge: {
+    type: Number,
+    required: true,
+    min: [0, 'Packing charge cannot be negative']
+  },
+
+  platformFee: {
+    type: Number,
+    required: true,
+    min: [0, 'Platform fee cannot be negative']
   },
   discount: {
     amount: {
@@ -269,7 +300,7 @@ orderSchema.virtual('totalItems').get(function() {
 
 // Virtual for final amount (after discount and tax)
 orderSchema.virtual('finalAmount').get(function() {
-  return this.totalAmount + this.deliveryFee + this.tax - this.discount.amount;
+  return this.totalAmount + this.deliveryCharge + this.tax - this.discount.amount;
 });
 
 // Virtual for delivery status

@@ -344,7 +344,7 @@ const RestaurantDashboard = () => {
                           </div>
                           <div className="flex md:flex-col md:items-end gap-3 w-full md:w-auto">
                             <p className="text-xl sm:text-2xl font-bold text-gray-900 md:text-right">
-                              {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.totalAmount || order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
+                              {formatCurrency(order.totalAmount ?? order.total ?? 0)}
                             </p>
                             <div className="flex flex-1 md:flex-none items-center justify-end md:justify-start gap-2">
                               {canUpdateStatus(order.status) && order._id && (

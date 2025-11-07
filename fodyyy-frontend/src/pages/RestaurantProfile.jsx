@@ -21,6 +21,9 @@ const RestaurantProfile = () => {
     email: '',
     image: '',
     deliveryCharge: 0,
+    gstPercentage: 5,
+    packingCharge: 0,
+    platformFee: 5,
     cuisineTypes: [],
     isClosed: false
   });
@@ -50,6 +53,9 @@ const RestaurantProfile = () => {
           email: data.email || user?.email || '',
           image: data.image || '',
           deliveryCharge: typeof data.deliveryCharge === 'number' ? data.deliveryCharge : 0,
+          gstPercentage: typeof data.gstPercentage === 'number' ? data.gstPercentage : 5,
+          packingCharge: typeof data.packingCharge === 'number' ? data.packingCharge : 0,
+          platformFee: typeof data.platformFee === 'number' ? data.platformFee : 5,
           cuisineTypes: data.cuisine || [],
           isClosed: data.isClosed || false
         });
@@ -385,27 +391,111 @@ const RestaurantProfile = () => {
               </div>
             </div>
 
-            {/* Delivery Charge Settings */}
+            {/* Charges & Fees Settings */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Delivery Charge</h3>
-              
-              <div className="max-w-md">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Charge (₹) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.deliveryCharge}
-                  onChange={(e) => handleInputChange('deliveryCharge', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
-                  className="input w-full"
-                  min="0"
-                  max="500"
-                  step="0.5"
-                />
-                <p className="mt-2 text-sm text-gray-600">
-                  Set the delivery charge for orders from your restaurant. Use 0 for free delivery.
-                </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Charges & Fees</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Delivery Charge */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Charge (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.deliveryCharge}
+                    onChange={(e) => handleInputChange('deliveryCharge', parseFloat(e.target.value) || 0)}
+                    placeholder="30"
+                    className="input w-full"
+                    min="0"
+                    max="500"
+                    step="0.5"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Amount charged per delivery</p>
+                </div>
+
+                {/* GST Percentage */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    GST Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.gstPercentage}
+                    onChange={(e) => handleInputChange('gstPercentage', parseFloat(e.target.value) || 0)}
+                    placeholder="5"
+                    className="input w-full"
+                    min="0"
+                    max="18"
+                    step="0.5"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">GST rate (0-18%). Default: 5%</p>
+                </div>
+
+                {/* Packing Charge */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Packing Charge (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.packingCharge}
+                    onChange={(e) => handleInputChange('packingCharge', parseFloat(e.target.value) || 0)}
+                    placeholder="10"
+                    className="input w-full"
+                    min="0"
+                    step="0.5"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Packing/container charges per order</p>
+                </div>
+
+                {/* Platform Fee */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Platform Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.platformFee}
+                    onChange={(e) => handleInputChange('platformFee', parseFloat(e.target.value) || 0)}
+                    placeholder="5"
+                    className="input w-full"
+                    min="0"
+                    step="0.5"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Platform service fee</p>
+                </div>
+              </div>
+
+              {/* Preview Box */}
+              <div className="mt-6 p-4 bg-orange-50 rounded-xl border border-orange-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Bill Preview (for ₹500 order):</p>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Item Total:</span>
+                    <span className="font-semibold">₹500</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Delivery Charge:</span>
+                    <span className="font-semibold">₹{formData.deliveryCharge}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Packing Charge:</span>
+                    <span className="font-semibold">₹{formData.packingCharge}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Platform Fee:</span>
+                    <span className="font-semibold">₹{formData.platformFee}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>GST ({formData.gstPercentage}%):</span>
+                    <span className="font-semibold">₹{((500 * formData.gstPercentage) / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-orange-300 pt-1 mt-2 flex justify-between font-bold text-base text-orange-600">
+                    <span>Total:</span>
+                    <span>₹{(500 + Number(formData.deliveryCharge) + Number(formData.packingCharge) + Number(formData.platformFee) + (500 * formData.gstPercentage / 100)).toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             </div>
 

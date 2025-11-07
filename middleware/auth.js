@@ -164,11 +164,65 @@ const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100) => {
   };
 };
 
+// Middleware to check order access permissions
+const checkOrderAccess = async (req, res, next) => {
+  try {
+    const { Order } = require('../models');
+    const orderId = req.params.id;
+
+    // Find the order
+    const order = await Order.findById(orderId).populate('restaurantId', 'ownerId');
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Check access based on user role
+    let hasAccess = false;
+    let userRole = 'student'; // default
+
+    if (req.user.role === 'student') {
+      // Students can only access their own orders
+      hasAccess = order.studentId.toString() === req.user._id.toString();
+      userRole = 'student';
+    } else if (req.user.role === 'restaurant') {
+      // Restaurant owners can access orders from their restaurant
+      hasAccess = order.restaurantId.ownerId.toString() === req.user._id.toString();
+      userRole = 'restaurant';
+    } else if (req.user.role === 'admin') {
+      // Admins can access all orders
+      hasAccess = true;
+      userRole = 'admin';
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You do not have permission to view this order'
+      });
+    }
+
+    // Add order and user role to request for use in route handler
+    req.order = order;
+    req.userRole = userRole;
+    next();
+
+  } catch (error) {
+    console.error('Order access check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify order access'
+    });
+  }
+};
+
 // Optional middleware to log authentication attempts
 const logAuthAttempt = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent') || 'Unknown';
-  
+
   console.log(`Auth attempt from IP: ${ip}, User-Agent: ${userAgent}`);
   next();
 };

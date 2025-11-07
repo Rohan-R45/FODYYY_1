@@ -241,27 +241,23 @@ const calculateOrderTotal = (items) => {
 
 // Helper function to format order response
 const formatOrderResponse = (order, userRole = null) => {
-  const subtotal = calculateOrderTotal(order.items);
-  const deliveryFee = order.deliveryFee || 0;
-  const tax = order.tax || 0;
-  const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : (order.discount || 0);
-  const total = Math.max(0, subtotal + deliveryFee + tax - discount);
-
   const formattedOrder = {
     _id: order._id,
     orderNumber: order.orderNumber,
     status: order.status,
-    // Sum of items (at order time). Some clients treat this as items subtotal.
+    // Use stored values from order time (most accurate)
     totalAmount: order.totalAmount,
-    // Provide explicit monetary breakdown so clients don't guess
-    subtotal,
-    deliveryFee,
-    tax,
+    itemTotal: order.itemTotal,
+    deliveryCharge: order.deliveryCharge,
+    gstPercentage: order.gstPercentage,
+    gstAmount: order.gstAmount,
+    packingCharge: order.packingCharge,
+    platformFee: order.platformFee,
     // Keep both number and detail object compatibility
-    discount,
+    discount: (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : (order.discount || 0),
     discountDetails: order.discount || { amount: 0 },
-    // Explicit payable total for UI clients (final amount payable)
-    total,
+    // For backward compatibility, calculate total from stored values
+    total: order.totalAmount,
 
     deliveryAddress: order.deliveryAddress,
     phoneNumber: order.phoneNumber,
@@ -366,8 +362,8 @@ router.get('/:id/tracking',
           paymentStatus: order.paymentStatus,
           paymentMethod: order.paymentMethod,
           totalAmount: order.totalAmount,
-          subtotal: order.totalAmount - order.deliveryFee - order.tax + (order.discount?.amount || 0),
-          deliveryFee: order.deliveryFee,
+          subtotal: order.totalAmount - order.deliveryCharge - order.tax + (order.discount?.amount || 0),
+          deliveryFee: order.deliveryCharge,
           tax: order.tax,
           discount: order.discount,
           total: order.totalAmount,
@@ -557,7 +553,7 @@ router.get('/restaurant/manage',
       // Format orders for management view (include computed final total)
       const formattedOrders = orders.map(order => {
         const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const deliveryFee = Number(order.deliveryFee || 0);
+        const deliveryFee = Number(order.deliveryCharge || 0);
         const tax = Number(order.tax || 0);
         const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : Number(order.discount || 0);
         const total = Math.max(0, subtotal + deliveryFee + tax - discount);
@@ -723,12 +719,24 @@ router.post('/',
       // Calculate subtotal (sum of item prices at order time)
       const subtotal = calculateOrderTotal(orderItems);
 
-      // Fetch restaurant's deliveryCharge directly from database
-      const restaurantData = await Restaurant.findById(restaurantId).select('deliveryCharge');
-      const deliveryCharge = (restaurantData && typeof restaurantData.deliveryCharge === 'number') 
-        ? restaurantData.deliveryCharge 
+      // Fetch restaurant with all charges
+      const restaurantData = await Restaurant.findById(restaurantId).select('deliveryCharge gstPercentage packingCharge platformFee');
+      const deliveryCharge = (restaurantData && typeof restaurantData.deliveryCharge === 'number')
+        ? restaurantData.deliveryCharge
         : 0;
+      const gstPercentage = (restaurantData && typeof restaurantData.gstPercentage === 'number')
+        ? restaurantData.gstPercentage
+        : 5;
+      const packingCharge = (restaurantData && typeof restaurantData.packingCharge === 'number')
+        ? restaurantData.packingCharge
+        : 0;
+      const platformFee = (restaurantData && typeof restaurantData.platformFee === 'number')
+        ? restaurantData.platformFee
+        : 5;
+
+      // Calculate charges
       const deliveryFee = subtotal > 0 ? deliveryCharge : 0;
+      const gstAmount = (subtotal * gstPercentage) / 100;
 
       // Generate unique order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -738,14 +746,22 @@ router.post('/',
       const maxDeliveryTime = deliveryTimeMatch ? parseInt(deliveryTimeMatch[1]) + 10 : 45;
       const estimatedDeliveryTime = new Date(Date.now() + maxDeliveryTime * 60 * 1000);
 
+      // Calculate total amount
+      const totalAmount = subtotal + deliveryFee + packingCharge + platformFee + gstAmount;
+
       // Create order
       const orderData = {
         orderNumber,
         studentId: req.user._id,
         restaurantId,
         items: orderItems,
-        totalAmount: Math.round(subtotal * 100) / 100, // Store items sum as subtotal-compatible field
-        deliveryFee: Math.round(deliveryFee * 100) / 100,
+        itemTotal: Math.round(subtotal * 100) / 100,
+        deliveryCharge: Math.round(deliveryFee * 100) / 100,
+        gstPercentage,
+        gstAmount: Math.round(gstAmount * 100) / 100,
+        packingCharge: Math.round(packingCharge * 100) / 100,
+        platformFee: Math.round(platformFee * 100) / 100,
+        totalAmount: Math.round(totalAmount * 100) / 100,
         deliveryAddress,
         phone: phoneNumber,
         paymentMethod,
@@ -881,7 +897,7 @@ router.get('/student',
             totalSpent: {
               $sum: {
                 $subtract: [
-                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] },
+                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] },
                   { $ifNull: ['$discount.amount', { $ifNull: ['$discount', 0] }] }
                 ]
               }
@@ -889,7 +905,7 @@ router.get('/student',
             averageOrderValue: {
               $avg: {
                 $subtract: [
-                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] },
+                  { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] },
                   { $ifNull: ['$discount.amount', { $ifNull: ['$discount', 0] }] }
                 ]
               }
@@ -1490,8 +1506,8 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   totalOrders: { $sum: 1 },
-                  totalRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } },
-                  averageOrderValue: { $avg: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
+                  totalRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] } },
+                  averageOrderValue: { $avg: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1501,7 +1517,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   todayOrders: { $sum: 1 },
-                  todayRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
+                  todayRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1511,7 +1527,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   weekOrders: { $sum: 1 },
-                  weekRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
+                  weekRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1521,7 +1537,7 @@ router.get('/stats/dashboard',
                 $group: {
                   _id: null,
                   monthOrders: { $sum: 1 },
-                  monthRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryFee', 0] }, { $ifNull: ['$tax', 0] } ] } }
+                  monthRevenue: { $sum: { $add: [ { $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$deliveryCharge', 0] }, { $ifNull: ['$tax', 0] } ] } }
                 }
               }
             ],
@@ -1550,7 +1566,7 @@ router.get('/stats/dashboard',
                   orderNumber: 1,
                   status: 1,
                   totalAmount: 1,
-                  deliveryFee: 1,
+                  deliveryCharge: 1,
                   tax: 1,
                   discount: 1,
                   createdAt: 1,
@@ -1575,7 +1591,7 @@ router.get('/stats/dashboard',
         }, {}),
         recentOrders: result.recentOrders.map(order => {
           const subtotal = order.totalAmount || 0;
-          const deliveryFee = order.deliveryFee || 0;
+          const deliveryFee = order.deliveryCharge || 0;
           const tax = order.tax || 0;
           const discount = (order.discount && typeof order.discount.amount === 'number') ? order.discount.amount : (order.discount || 0);
           const total = Math.max(0, subtotal + deliveryFee + tax - discount);

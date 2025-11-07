@@ -347,7 +347,7 @@ const MyOrders = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-1">
-                      {formatCurrency((typeof order.total === 'number') ? order.total : (Number(order.subtotal || order.totalAmount || 0) + Number(order.deliveryFee || 0) + Number(order.tax || 0) - (typeof order.discount === 'number' ? order.discount : Number(order?.discount?.amount || 0))))}
+                      {formatCurrency(order.totalAmount ?? order.total ?? 0)}
                     </div>
                     <div className="text-sm text-gray-600 font-medium">
                       {order.items.length} item{order.items.length !== 1 ? 's' : ''}

@@ -22,7 +22,7 @@ const UPIPaymentModal = ({
       setIsGeneratingQR(true);
       
       // Create UPI payment URL
-      const amount = (typeof orderData.total === 'number') ? orderData.total : (Number(orderData.subtotal || orderData.totalAmount || 0) + Number(orderData.deliveryFee || 0) + Number(orderData.tax || 0) - (typeof orderData.discount === 'number' ? orderData.discount : Number(orderData?.discount?.amount || 0)));
+      const amount = orderData.totalAmount ?? orderData.total ?? 0;
       const upiUrl = `upi://pay?pa=${orderData.upiDetails.upiId}&pn=Restaurant&am=${amount}&cu=INR&tn=${orderData.upiDetails.note}`;
       
       // Generate QR code
