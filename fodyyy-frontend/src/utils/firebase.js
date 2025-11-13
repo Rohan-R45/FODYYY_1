@@ -14,6 +14,9 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Check if we should use Firebase emulator (for development without billing)
+const USE_EMULATOR = import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true';
+
 // Validate Firebase config
 const validateConfig = () => {
   const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
@@ -32,6 +35,17 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Initialize Firebase emulator if enabled (for development)
+if (USE_EMULATOR) {
+  try {
+    const { connectAuthEmulator } = await import('firebase/auth');
+    connectAuthEmulator(auth, "http://localhost:9099");
+    console.log('🔧 Firebase Auth emulator initialized');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize Firebase Auth emulator:', error.message);
+  }
+}
 
 // Initialize Firebase Cloud Messaging
 let messaging = null;
@@ -203,6 +217,9 @@ export const sendOTP = async (phoneNumber) => {
         break;
       case 'auth/operation-not-allowed':
         errorMessage = 'Phone authentication is not enabled. Please contact support.';
+        break;
+      case 'auth/billing-not-enabled':
+        errorMessage = 'Firebase billing is not enabled. Please enable billing in your Firebase project or use email/password authentication.';
         break;
       default:
         if (error.message.includes('reCAPTCHA container')) {
