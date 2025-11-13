@@ -492,10 +492,7 @@ const RestaurantOrders = () => {
 
   const statusOptions = [
     { value: 'all', label: 'All Orders', icon: '📋' },
-    { value: 'pending', label: 'Pending', icon: '⏳' },
     { value: 'confirmed', label: 'Confirmed', icon: '✅' },
-    { value: 'preparing', label: 'Preparing', icon: '👨‍🍳' },
-    { value: 'ready', label: 'Ready', icon: '🎒' },
     { value: 'delivered', label: 'Delivered', icon: '🎉' }
   ];
 
