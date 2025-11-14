@@ -34,7 +34,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
-  const [verifiedPhoneNumber, setVerifiedPhoneNumber] = useState('');
+  const [verifiedEmail, setVerifiedEmail] = useState('');
 
   // Load user data on mount
   useEffect(() => {
@@ -123,7 +123,7 @@ const Checkout = () => {
       toast.error('Phone number is required');
       return false;
     }
-    
+
     if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
       toast.error('Please enter a valid 10-digit phone number');
       return false;
@@ -153,30 +153,30 @@ const Checkout = () => {
   };
 
   // Handle OTP verification success
-  const handleOTPVerificationSuccess = async (verifiedPhone) => {
-    setVerifiedPhoneNumber(verifiedPhone);
+  const handleOTPVerificationSuccess = async (verifiedEmail) => {
+    setVerifiedEmail(verifiedEmail);
     setShowOTPModal(false);
 
-    // Now place the order with verified phone number
-    await placeOrderWithVerifiedPhone(verifiedPhone);
+    // Now place the order with verified email
+    await placeOrderWithVerifiedEmail(verifiedEmail);
   };
 
   // Handle OTP modal close (user cancelled verification)
   const handleOTPModalClose = () => {
     setShowOTPModal(false);
-    toast.info('Order verification cancelled. Please try again when ready.');
+    toast('Order verification cancelled. Please try again when ready.');
   };
 
   // Modified to show OTP modal instead of placing order immediately
   const handlePlaceOrder = () => {
     if (!validateForm()) return;
 
-    // Show OTP verification modal
+    // Show OTP verification modal with user's email
     setShowOTPModal(true);
   };
 
   // Actually place the order after OTP verification
-  const placeOrderWithVerifiedPhone = async (verifiedPhone) => {
+  const placeOrderWithVerifiedEmail = async (verifiedEmail) => {
     setIsLoading(true);
     try {
       // Format delivery address as a single string
@@ -195,7 +195,8 @@ const Checkout = () => {
           specialInstructions: item.specialInstructions || ''
         })),
         deliveryAddress: formattedAddress,
-        phoneNumber: verifiedPhone, // Use verified phone number
+        phoneNumber: phoneNumber, // Use phone number from form
+        email: verifiedEmail, // Use verified email
         paymentMethod,
         specialInstructions: deliveryAddress.instructions || ''
       };
@@ -353,7 +354,7 @@ const Checkout = () => {
                   </svg>
                   Contact Information
                 </h3>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Phone Number *
@@ -537,7 +538,6 @@ const Checkout = () => {
         isOpen={showOTPModal}
         onClose={handleOTPModalClose}
         onVerificationSuccess={handleOTPVerificationSuccess}
-        phoneNumber={phoneNumber}
       />
     </div>
   );

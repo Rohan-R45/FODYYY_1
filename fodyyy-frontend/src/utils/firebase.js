@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from 'firebase/app';
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import api from '../services/api';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -33,21 +33,7 @@ validateConfig();
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication
-export const auth = getAuth(app);
-
-// Initialize Firebase emulator if enabled (for development)
-if (USE_EMULATOR) {
-  try {
-    const { connectAuthEmulator } = await import('firebase/auth');
-    connectAuthEmulator(auth, "http://localhost:9099");
-    console.log('🔧 Firebase Auth emulator initialized');
-  } catch (error) {
-    console.warn('⚠️ Failed to initialize Firebase Auth emulator:', error.message);
-  }
-}
-
-// Initialize Firebase Cloud Messaging
+// Initialize Firebase Cloud Messaging only (keeping for push notifications)
 let messaging = null;
 let fcmSupported = false;
 
@@ -70,188 +56,95 @@ const initializeMessaging = async () => {
 // Initialize messaging on module load
 initializeMessaging();
 
-// Store recaptcha verifier
-let recaptchaVerifier = null;
+
 
 /**
- * Setup reCAPTCHA verifier for phone authentication
- * @param {string} containerId - ID of the DOM element for reCAPTCHA
- * @returns {RecaptchaVerifier} - The initialized verifier
+ * Send OTP to email address
+ * @param {string} email - Email address to send OTP to
+ * @returns {Promise<object>} - Result with success status
  */
-export const setupRecaptcha = (containerId = 'recaptcha-container') => {
+export const sendEmailOTP = async (email) => {
   try {
-    // Clear existing verifier
-    if (recaptchaVerifier) {
-      try {
-        recaptchaVerifier.clear();
-      } catch (e) {
-        console.log('Previous verifier already cleared');
-      }
-      recaptchaVerifier = null;
+    console.log('📧 Starting email OTP send process...');
+
+    // Validate email
+    if (!email) {
+      throw new Error('Email is required');
     }
 
-    // Check if container exists
-    const container = document.getElementById(containerId);
-    if (!container) {
-      throw new Error(`reCAPTCHA container with ID "${containerId}" not found in DOM`);
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error('Please provide a valid email address');
     }
 
-    // CORRECT ORDER: auth, containerId, options
-    recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-      size: 'invisible',
-      callback: (response) => {
-        console.log('✓ reCAPTCHA solved successfully');
-      },
-      'expired-callback': () => {
-        console.warn('⚠ reCAPTCHA expired, please try again');
-        recaptchaVerifier = null;
-      }
-    });
+    console.log('📧 Sending OTP to:', email);
 
-    console.log('✓ reCAPTCHA verifier initialized');
-    return recaptchaVerifier;
+    // Call backend API to send email OTP
+    const response = await api.post('/auth/send-email-otp', { email });
 
-  } catch (error) {
-    console.error('✗ Error setting up reCAPTCHA:', error);
-    throw new Error(`Failed to initialize reCAPTCHA: ${error.message}`);
-  }
-};
-
-/**
- * Format phone number to international format
- * @param {string} phoneNumber - Phone number to format
- * @returns {string} - Formatted phone number with +91 prefix
- */
-const formatPhoneNumber = (phoneNumber) => {
-  if (!phoneNumber) {
-    throw new Error('Phone number is required');
-  }
-
-  // Remove spaces, dashes, parentheses
-  let cleaned = phoneNumber.trim().replace(/[\s\-\(\)]/g, '');
-
-  // Remove any leading zeros
-  cleaned = cleaned.replace(/^0+/, '');
-
-  // Add +91 if not present
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('91') && cleaned.length === 12) {
-      cleaned = '+' + cleaned;
-    } else if (cleaned.length === 10 && /^[6-9]/.test(cleaned)) {
-      cleaned = '+91' + cleaned;
+    if (response.data.success) {
+      console.log('✓ Email OTP sent successfully!');
+      return {
+        success: true,
+        message: response.data.message,
+        expiresIn: response.data.expiresIn
+      };
     } else {
-      throw new Error('Invalid phone number format. Must be 10 digits starting with 6-9');
+      throw new Error(response.data.message || 'Failed to send OTP email');
     }
-  }
-
-  // Validate final format
-  if (!/^\+91[6-9]\d{9}$/.test(cleaned)) {
-    throw new Error('Invalid Indian phone number format');
-  }
-
-  return cleaned;
-};
-
-/**
- * Send OTP to phone number
- * @param {string} phoneNumber - Phone number to send OTP to
- * @returns {Promise<object>} - Result with success status and confirmationResult
- */
-export const sendOTP = async (phoneNumber) => {
-  try {
-    console.log('📱 Starting OTP send process...');
-
-    // Format and validate phone number
-    const formattedPhone = formatPhoneNumber(phoneNumber);
-    console.log('📱 Formatted phone:', formattedPhone);
-
-    // Ensure reCAPTCHA container exists
-    const container = document.getElementById('recaptcha-container');
-    if (!container) {
-      throw new Error('reCAPTCHA container not found. Please refresh the page.');
-    }
-
-    // Setup reCAPTCHA verifier
-    console.log('🔒 Setting up reCAPTCHA...');
-    const appVerifier = setupRecaptcha('recaptcha-container');
-
-    // Small delay to ensure reCAPTCHA is ready
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Send OTP via Firebase
-    console.log('📤 Sending OTP via Firebase...');
-    const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-
-    console.log('✓ OTP sent successfully!');
-
-    return {
-      success: true,
-      confirmationResult,
-      message: 'OTP sent successfully to your phone'
-    };
 
   } catch (error) {
-    console.error('✗ Error sending OTP:', error);
+    console.error('✗ Error sending email OTP:', error);
 
-    // Clear verifier on error
-    clearRecaptcha();
-
-    // Map Firebase errors to user-friendly messages
+    // Handle different types of errors
     let errorMessage = 'Failed to send OTP. Please try again.';
 
-    switch (error.code) {
-      case 'auth/invalid-phone-number':
-        errorMessage = 'Invalid phone number. Please enter a valid 10-digit mobile number.';
-        break;
-      case 'auth/too-many-requests':
-        errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
-        break;
-      case 'auth/quota-exceeded':
-        errorMessage = 'SMS quota exceeded. Please contact support or try again later.';
-        break;
-      case 'auth/captcha-check-failed':
-        errorMessage = 'reCAPTCHA verification failed. Please refresh the page and try again.';
-        break;
-      case 'auth/missing-phone-number':
-        errorMessage = 'Phone number is required.';
-        break;
-      case 'auth/operation-not-allowed':
-        errorMessage = 'Phone authentication is not enabled. Please contact support.';
-        break;
-      case 'auth/billing-not-enabled':
-        errorMessage = 'Firebase billing is not enabled. Please enable billing in your Firebase project or use email/password authentication.';
-        break;
-      default:
-        if (error.message.includes('reCAPTCHA container')) {
-          errorMessage = error.message;
-        } else if (error.message.includes('Invalid')) {
-          errorMessage = error.message;
-        } else if (!navigator.onLine) {
-          errorMessage = 'No internet connection. Please check your connection and try again.';
-        }
+    if (error.response) {
+      // Backend returned an error
+      const status = error.response.status;
+      const errorData = error.response.data;
+
+      switch (status) {
+        case 400:
+          errorMessage = errorData.message || 'Invalid email address';
+          break;
+        case 429:
+          errorMessage = errorData.message || 'Too many requests. Please wait before trying again.';
+          break;
+        case 500:
+          errorMessage = 'Server error. Please try again later.';
+          break;
+        default:
+          errorMessage = errorData.message || 'Failed to send OTP';
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. Please check your connection and try again.';
+    } else if (!navigator.onLine) {
+      errorMessage = 'No internet connection. Please check your connection and try again.';
+    } else if (error.message) {
+      errorMessage = error.message;
     }
 
     return {
       success: false,
-      error: errorMessage,
-      code: error.code
+      error: errorMessage
     };
   }
 };
 
 /**
- * Verify OTP code
- * @param {object} confirmationResult - The confirmation result from sendOTP
+ * Verify email OTP code
+ * @param {string} email - Email address
  * @param {string} otpCode - 6-digit OTP code entered by user
- * @returns {Promise<object>} - Result with success status and user data
+ * @returns {Promise<object>} - Result with success status
  */
-export const verifyOTP = async (confirmationResult, otpCode) => {
+export const verifyEmailOTP = async (email, otpCode) => {
   try {
-    console.log('🔐 Verifying OTP code...');
+    console.log('🔐 Verifying email OTP code...');
 
     // Validate inputs
-    if (!confirmationResult) {
-      throw new Error('No confirmation result available. Please request a new OTP.');
+    if (!email) {
+      throw new Error('Email is required');
     }
 
     if (!otpCode) {
@@ -265,72 +158,62 @@ export const verifyOTP = async (confirmationResult, otpCode) => {
       throw new Error('Please enter a valid 6-digit OTP code');
     }
 
-    // Verify OTP with Firebase
-    const result = await confirmationResult.confirm(cleanedOTP);
+    console.log('🔐 Verifying OTP for:', email);
 
-    console.log('✓ OTP verified successfully!');
+    // Call backend API to verify email OTP
+    const response = await api.post('/auth/verify-email-otp', {
+      email: email.toLowerCase(),
+      otp: cleanedOTP
+    });
 
-    return {
-      success: true,
-      user: result.user,
-      message: 'Phone number verified successfully',
-      phoneNumber: result.user.phoneNumber
-    };
+    if (response.data.success) {
+      console.log('✓ Email OTP verified successfully!');
+      return {
+        success: true,
+        message: response.data.message,
+        email: response.data.email
+      };
+    } else {
+      throw new Error(response.data.message || 'Invalid OTP code');
+    }
 
   } catch (error) {
-    console.error('✗ Error verifying OTP:', error);
+    console.error('✗ Error verifying email OTP:', error);
 
-    // Map Firebase errors to user-friendly messages
+    // Handle different types of errors
     let errorMessage = 'Invalid OTP code. Please try again.';
 
-    switch (error.code) {
-      case 'auth/invalid-verification-code':
-        errorMessage = 'Invalid OTP code. Please check the code and try again.';
-        break;
-      case 'auth/code-expired':
-        errorMessage = 'OTP has expired. Please request a new code.';
-        break;
-      case 'auth/session-expired':
-        errorMessage = 'Session expired. Please request a new OTP.';
-        break;
-      case 'auth/too-many-requests':
-        errorMessage = 'Too many failed attempts. Please try again after some time.';
-        break;
-      case 'auth/missing-verification-code':
-        errorMessage = 'Verification code is required.';
-        break;
-      default:
-        if (error.message.includes('valid 6-digit')) {
-          errorMessage = error.message;
-        } else if (error.message.includes('confirmation result')) {
-          errorMessage = error.message;
-        } else if (!navigator.onLine) {
-          errorMessage = 'No internet connection. Please check your connection and try again.';
-        }
+    if (error.response) {
+      // Backend returned an error
+      const status = error.response.status;
+      const errorData = error.response.data;
+
+      switch (status) {
+        case 400:
+          errorMessage = errorData.message || 'Invalid OTP code or email';
+          break;
+        case 500:
+          errorMessage = 'Server error. Please try again later.';
+          break;
+        default:
+          errorMessage = errorData.message || 'Failed to verify OTP';
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. Please check your connection and try again.';
+    } else if (!navigator.onLine) {
+      errorMessage = 'No internet connection. Please check your connection and try again.';
+    } else if (error.message) {
+      errorMessage = error.message;
     }
 
     return {
       success: false,
-      error: errorMessage,
-      code: error.code
+      error: errorMessage
     };
   }
 };
 
-/**
- * Clear reCAPTCHA verifier and reset state
- */
-export const clearRecaptcha = () => {
-  if (recaptchaVerifier) {
-    try {
-      recaptchaVerifier.clear();
-      console.log('✓ reCAPTCHA verifier cleared');
-    } catch (error) {
-      console.log('Note: Verifier already cleared or not initialized');
-    }
-    recaptchaVerifier = null;
-  }
-};
+
 
 /**
  * Request permission for push notifications and get FCM token

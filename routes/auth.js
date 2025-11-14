@@ -1,7 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { User, Restaurant } = require('../models');
+const { User, Restaurant, OTP } = require('../models');
+const { generateOTP, sendOTPEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -15,6 +16,8 @@ router.get('/test', (req, res) => {
     route: '/api/auth/test'
   });
 });
+
+
 
 // Simple test login route
 router.post('/test-login', (req, res) => {
@@ -704,6 +707,143 @@ router.post('/refresh', protect, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Token refresh failed',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+// Rate limiting store for email OTP (simple in-memory store)
+const otpRequests = new Map();
+
+// Send Email OTP
+router.post('/send-email-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate email
+    if (!email) {
+      console.log('❌ Email is missing from request');
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    // Rate limiting: max 3 requests per email per hour
+    const now = Date.now();
+    const emailKey = email.toLowerCase();
+    const requests = otpRequests.get(emailKey) || [];
+
+    // Filter out requests older than 1 hour
+    const recentRequests = requests.filter(time => now - time < 60 * 60 * 1000);
+
+    if (recentRequests.length >= 3) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many OTP requests. Please try again after 1 hour.'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+
+    // Save OTP to database
+    const otpDoc = new OTP({
+      email: email.toLowerCase(),
+      otp: otp,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+    });
+
+    await otpDoc.save();
+
+    // Send email
+    const emailResult = await sendOTPEmail(email, otp);
+
+    if (!emailResult.success) {
+      // Clean up the OTP if email failed
+      await OTP.findByIdAndDelete(otpDoc._id);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP email. Please try again.'
+      });
+    }
+
+    // Update rate limiting
+    recentRequests.push(now);
+    otpRequests.set(emailKey, recentRequests);
+
+    console.log(`✅ OTP sent to ${email}: ${otp}`);
+
+    res.json({
+      success: true,
+      message: 'OTP sent successfully to your email',
+      expiresIn: 300 // 5 minutes in seconds
+    });
+
+  } catch (error) {
+    console.error('❌ Send email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP. Please try again.',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+// Verify Email OTP
+router.post('/verify-email-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validate inputs
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
+      });
+    }
+
+    if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 6-digit OTP'
+      });
+    }
+
+    // Find valid OTP
+    const otpDoc = await OTP.findValidOTP(email.toLowerCase(), otp);
+
+    if (!otpDoc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP. Please try again.'
+      });
+    }
+
+    // Mark OTP as verified and delete it
+    await OTP.findByIdAndDelete(otpDoc._id);
+
+    console.log(`✅ OTP verified for ${email}`);
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully',
+      email: email.toLowerCase()
+    });
+
+  } catch (error) {
+    console.error('❌ Verify email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP. Please try again.',
       ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
   }

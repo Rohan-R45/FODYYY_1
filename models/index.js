@@ -5,12 +5,14 @@ const User = require('./User');
 const Restaurant = require('./Restaurant');
 const MenuItem = require('./MenuItem');
 const Order = require('./Order');
+const OTP = require('./OTP');
 
 module.exports = {
   User,
   Restaurant,
   MenuItem,
-  Order
+  Order,
+  OTP
 };
 
 // Alternative individual exports for convenience
@@ -18,17 +20,18 @@ module.exports.User = User;
 module.exports.Restaurant = Restaurant;
 module.exports.MenuItem = MenuItem;
 module.exports.Order = Order;
+module.exports.OTP = OTP;
 
 // Model validation helper
 const validateModels = () => {
-  const models = { User, Restaurant, MenuItem, Order };
-  
+  const models = { User, Restaurant, MenuItem, Order, OTP };
+
   for (const [name, model] of Object.entries(models)) {
     if (!model || typeof model !== 'function') {
       throw new Error(`Model ${name} is not properly defined`);
     }
   }
-  
+
   console.log('✅ All models loaded successfully');
   return true;
 };

@@ -241,8 +241,8 @@ try { notificationRoutes = require('./routes/notifications'); logger.info('Notif
 catch (e) { logger.error('Failed to load notification routes', { error: e.message, stack: e.stack }); process.exit(1); }
 
 // --- Mount routes ---
+app.use('/api/auth', notificationRoutes); // Mount notification routes under /api/auth first
 app.use('/api/auth', authRoutes);
-app.use('/api/auth', notificationRoutes); // Mount notification routes under /api/auth
 app.use('/api/user', usersRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);

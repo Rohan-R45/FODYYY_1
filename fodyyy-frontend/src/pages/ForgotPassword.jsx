@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { sendOTP, verifyOTP, clearRecaptcha } from '../utils/firebase';
+import { sendEmailOTP, verifyEmailOTP } from '../utils/firebase';
 import toast from 'react-hot-toast';
 import {
   Phone,
@@ -18,11 +18,10 @@ import {
 } from 'lucide-react';
 
 // Forgot Password Modal Component
-const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
-  const [step, setStep] = useState('phone'); // 'phone' or 'otp'
-  const [phoneNumber, setPhoneNumber] = useState('');
+const ForgotPasswordModal = ({ isOpen, onClose, onEmailVerified }) => {
+  const [step, setStep] = useState('email'); // 'email' or 'otp'
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -42,14 +41,12 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
   // Reset modal when closed
   useEffect(() => {
     if (!isOpen) {
-      setStep('phone');
-      setPhoneNumber('');
+      setStep('email');
+      setEmail('');
       setOtp('');
-      setConfirmationResult(null);
       setError('');
       setResendCooldown(0);
       setOtpInputs(['', '', '', '', '', '']);
-      clearRecaptcha();
     }
   }, [isOpen]);
 
@@ -80,17 +77,17 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
     }
   };
 
-  // Send OTP to phone number
-  const handleSendOTP = async () => {
-    if (!phoneNumber.trim()) {
-      setError('Please enter a phone number');
+  // Send OTP to email address
+  const handleSendEmailOTP = async () => {
+    if (!email.trim()) {
+      setError('Please enter an email address');
       return;
     }
 
-    // Basic phone validation
-    const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(phoneNumber.replace(/\D/g, ''))) {
-      setError('Please enter a valid 10-digit phone number');
+    // Basic email validation
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -98,9 +95,8 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
     setError('');
 
     try {
-      const result = await sendOTP(phoneNumber);
+      const result = await sendEmailOTP(email);
       if (result.success) {
-        setConfirmationResult(result.confirmationResult);
         setStep('otp');
         setResendCooldown(60); // 60 seconds cooldown
         toast.success('OTP sent successfully!');
@@ -108,18 +104,13 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
         setError(result.error || 'Failed to send OTP');
       }
     } catch (err) {
-      console.error('OTP send error:', err);
+      console.error('Email OTP send error:', err);
       let errorMessage = 'Failed to send OTP. Please try again.';
 
-      // Handle specific Firebase errors
-      if (err.code === 'auth/invalid-phone-number') {
-        errorMessage = 'Invalid phone number format. Please check and try again.';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
-      } else if (err.code === 'auth/quota-exceeded') {
-        errorMessage = 'SMS quota exceeded. Please try again later.';
-      } else if (!navigator.onLine) {
+      if (!navigator.onLine) {
         errorMessage = 'No internet connection. Please check your connection and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
       }
 
       setError(errorMessage);
@@ -129,7 +120,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
   };
 
   // Verify OTP
-  const handleVerifyOTP = async () => {
+  const handleVerifyEmailOTP = async () => {
     if (otp.length !== 6) {
       setError('Please enter the complete 6-digit OTP');
       return;
@@ -139,27 +130,22 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
     setError('');
 
     try {
-      const result = await verifyOTP(confirmationResult, otp);
+      const result = await verifyEmailOTP(email, otp);
       if (result.success) {
-        toast.success('Phone number verified successfully!');
-        onPhoneVerified(phoneNumber);
+        toast.success('Email verified successfully!');
+        onEmailVerified(email);
         // Modal will close automatically when step changes to 'new-password'
       } else {
         setError(result.error || 'Invalid OTP. Please try again.');
       }
     } catch (err) {
-      console.error('OTP verification error:', err);
+      console.error('Email OTP verification error:', err);
       let errorMessage = 'Failed to verify OTP. Please try again.';
 
-      // Handle specific Firebase errors
-      if (err.code === 'auth/invalid-verification-code') {
-        errorMessage = 'Invalid verification code. Please check the code and try again.';
-      } else if (err.code === 'auth/code-expired') {
-        errorMessage = 'Verification code has expired. Please request a new code.';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many verification attempts. Please wait before trying again.';
-      } else if (!navigator.onLine) {
+      if (!navigator.onLine) {
         errorMessage = 'No internet connection. Please check your connection and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
       }
 
       setError(errorMessage);
@@ -169,16 +155,15 @@ const ForgotPasswordModal = ({ isOpen, onClose, onPhoneVerified }) => {
   };
 
   // Resend OTP
-  const handleResendOTP = async () => {
+  const handleResendEmailOTP = async () => {
     if (resendCooldown > 0) return;
 
     setIsLoading(true);
     setError('');
 
     try {
-      const result = await sendOTP(phoneNumber);
+      const result = await sendEmailOTP(email);
       if (result.success) {
-        setConfirmationResult(result.confirmationResult);
         setResendCooldown(60);
         toast.success('OTP resent successfully!');
       } else {
