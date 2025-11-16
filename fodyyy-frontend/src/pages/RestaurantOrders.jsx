@@ -488,6 +488,13 @@ const RestaurantOrders = () => {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalOrders: 0,
+    hasNext: false,
+    hasPrev: false
+  });
   const audioRef = useRef(null);
 
   const statusOptions = [
@@ -497,20 +504,20 @@ const RestaurantOrders = () => {
   ];
 
   useEffect(() => {
-    loadOrders();
+    loadOrders(false, 1); // Reset to page 1 when status changes
 
     // Set up polling for real-time updates every 2 minutes, but only when page is visible
     const interval = setInterval(() => {
       // Only poll if the page is visible (user is actively viewing it)
       if (!document.hidden) {
-        loadOrders(true); // Silent reload
+        loadOrders(true, pagination.currentPage); // Silent reload on current page
       }
     }, 120000);
 
     // Also poll immediately when page becomes visible again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        loadOrders(true);
+        loadOrders(true, pagination.currentPage);
       }
     };
 
@@ -528,35 +535,37 @@ const RestaurantOrders = () => {
     audioRef.current.volume = 0.5;
   }, []);
 
-  const loadOrders = async (silent = false) => {
+  const loadOrders = async (silent = false, page = 1) => {
     try {
       if (!silent) setIsLoading(true);
-      
-      const params = {};
+
+      const params = { page };
       if (selectedStatus !== 'all') params.status = selectedStatus;
 
       const response = await orderService.getRestaurantOrders(params);
-      
+
       if (response.success) {
         const newOrders = response.data.orders;
         const newStats = response.data.stats;
-        
-        // Check for new orders (only if not initial load)
-        if (orders.length > 0 && !silent) {
-          const newOrdersReceived = newOrders.filter(newOrder => 
+        const newPagination = response.data.pagination;
+
+        // Check for new orders (only if not initial load and on first page)
+        if (orders.length > 0 && !silent && page === 1) {
+          const newOrdersReceived = newOrders.filter(newOrder =>
             !orders.find(existingOrder => existingOrder._id === newOrder._id) &&
             newOrder.status === 'pending'
           );
-          
+
           if (newOrdersReceived.length > 0) {
             setNewOrdersCount(prev => prev + newOrdersReceived.length);
             playNotificationSound();
             toast.success(`${newOrdersReceived.length} new order${newOrdersReceived.length > 1 ? 's' : ''} received!`);
           }
         }
-        
+
         setOrders(newOrders);
         setStats(newStats);
+        setPagination(newPagination);
       } else {
         if (!silent) toast.error('Failed to load orders');
       }
@@ -613,12 +622,12 @@ const RestaurantOrders = () => {
   const handleVerifyPayment = async (orderId, notes) => {
     try {
       const response = await orderService.verifyPayment(orderId, notes);
-      
+
       if (response.success) {
-        setOrders(prev => prev.map(order => 
-          order._id === orderId 
-            ? { 
-                ...order, 
+        setOrders(prev => prev.map(order =>
+          order._id === orderId
+            ? {
+                ...order,
                 paymentDetails: {
                   ...order.paymentDetails,
                   verifiedAt: new Date().toISOString(),
@@ -634,6 +643,22 @@ const RestaurantOrders = () => {
     } catch (error) {
       console.error('Error verifying payment:', error);
       toast.error('Failed to verify payment');
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    loadOrders(false, newPage);
+  };
+
+  const handlePrevPage = () => {
+    if (pagination.hasPrev) {
+      handlePageChange(pagination.currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (pagination.hasNext) {
+      handlePageChange(pagination.currentPage + 1);
     }
   };
 
@@ -685,13 +710,13 @@ const RestaurantOrders = () => {
                   </div>
                 </div>
                 <p className="text-gray-600 text-sm sm:text-base mt-1">
-                  {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} found
+                  Showing {((pagination.currentPage - 1) * 100) + 1}-{Math.min(pagination.currentPage * 100, pagination.totalOrders)} of {pagination.totalOrders} orders
                 </p>
               </div>
             </div>
             
             <button
-              onClick={() => loadOrders()}
+              onClick={() => loadOrders(false, pagination.currentPage)}
               className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -752,11 +777,42 @@ const RestaurantOrders = () => {
             <div className="text-6xl mb-4">📋</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders found</h3>
             <p className="text-gray-600">
-              {selectedStatus === 'all' 
+              {selectedStatus === 'all'
                 ? "No orders received yet. Orders will appear here when customers place them."
                 : `No orders found with status "${selectedStatus}".`
               }
             </p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <button
+              onClick={handlePrevPage}
+              disabled={!pagination.hasPrev}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </button>
+
+            <span className="text-sm text-gray-600">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+
+            <button
+              onClick={handleNextPage}
+              disabled={!pagination.hasNext}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         )}
       </div>

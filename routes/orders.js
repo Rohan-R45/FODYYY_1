@@ -521,7 +521,7 @@ router.get('/restaurant/manage',
   authorize('restaurant'),
   async (req, res) => {
     try {
-      const { status, page = 1, limit = 10 } = req.query;
+      const { status, page = 1, limit = 100 } = req.query;
       
       // Find restaurant owned by current user
       const restaurant = await Restaurant.findOne({ ownerId: req.user._id });
