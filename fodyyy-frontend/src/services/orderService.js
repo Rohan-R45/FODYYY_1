@@ -362,6 +362,48 @@ const orderService = {
     }
   },
 
+  // Bulk archive orders
+  bulkArchiveOrders: async (orderIds, archiveType) => {
+    try {
+      const response = await api.put('/orders/bulk-archive', { orderIds, archiveType });
+      return response.data;
+    } catch (error) {
+      console.error('Error bulk archiving orders:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to archive orders'
+      };
+    }
+  },
+
+  // Get archived orders
+  getArchivedOrders: async (params = {}) => {
+    try {
+      const response = await api.get('/orders/archived', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching archived orders:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to fetch archived orders'
+      };
+    }
+  },
+
+  // Unarchive orders
+  unarchiveOrders: async (orderIds) => {
+    try {
+      const response = await api.put('/orders/unarchive', { orderIds });
+      return response.data;
+    } catch (error) {
+      console.error('Error unarchiving orders:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to unarchive orders'
+      };
+    }
+  },
+
   // Track order (real-time status)
   trackOrder: async (orderId) => {
     try {

@@ -4,6 +4,7 @@ import { formatCurrency, formatDateTime, getRelativeTime } from '../utils/helper
 import orderService from '../services/orderService';
 import PaymentStatusBadge from '../components/PaymentStatusBadge';
 import toast from 'react-hot-toast';
+import { playOrderNotificationSound, initializeAudio } from '../utils/notificationSound';
 
 // Payment Verification Dialog Component
 const PaymentVerificationDialog = ({ isOpen, onClose, order, onVerify }) => {
@@ -495,10 +496,14 @@ const RestaurantOrders = () => {
     hasNext: false,
     hasPrev: false
   });
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+  const [soundVolume, setSoundVolume] = useState(0.5);
+  const previousOrdersRef = useRef([]);
   const audioRef = useRef(null);
 
   const statusOptions = [
     { value: 'all', label: 'All Orders', icon: '📋' },
+    { value: 'today', label: "Today's Orders", icon: '📅' },
     { value: 'confirmed', label: 'Confirmed', icon: '✅' },
     { value: 'delivered', label: 'Delivered', icon: '🎉' }
   ];
@@ -535,12 +540,63 @@ const RestaurantOrders = () => {
     audioRef.current.volume = 0.5;
   }, []);
 
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const handleFirstClick = () => {
+      initializeAudio();
+      document.removeEventListener('click', handleFirstClick);
+    };
+    document.addEventListener('click', handleFirstClick);
+
+    return () => document.removeEventListener('click', handleFirstClick);
+  }, []);
+
+  // Load notification preferences from localStorage
+  useEffect(() => {
+    const savedEnabled = localStorage.getItem('notificationEnabled');
+    const savedVolume = localStorage.getItem('notificationVolume');
+
+    if (savedEnabled !== null) {
+      setNotificationEnabled(savedEnabled === 'true');
+    }
+    if (savedVolume !== null) {
+      setSoundVolume(parseFloat(savedVolume));
+    }
+  }, []);
+
+  // Save preferences when changed
+  useEffect(() => {
+    localStorage.setItem('notificationEnabled', notificationEnabled);
+    localStorage.setItem('notificationVolume', soundVolume);
+  }, [notificationEnabled, soundVolume]);
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
+
   const loadOrders = async (silent = false, page = 1) => {
     try {
       if (!silent) setIsLoading(true);
 
       const params = { page };
-      if (selectedStatus !== 'all') params.status = selectedStatus;
+
+      // Add today's date filter
+      if (selectedStatus === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        params.startDate = today.toISOString();
+        params.endDate = tomorrow.toISOString();
+      } else if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
 
       const response = await orderService.getRestaurantOrders(params);
 
@@ -549,19 +605,47 @@ const RestaurantOrders = () => {
         const newStats = response.data.stats;
         const newPagination = response.data.pagination;
 
-        // Check for new orders (only if not initial load and on first page)
-        if (orders.length > 0 && !silent && page === 1) {
+        // ✅ DETECT NEW ORDERS AND PLAY SOUND
+        if (previousOrdersRef.current.length > 0 && !silent && notificationEnabled) {
           const newOrdersReceived = newOrders.filter(newOrder =>
-            !orders.find(existingOrder => existingOrder._id === newOrder._id) &&
-            newOrder.status === 'pending'
+            !previousOrdersRef.current.find(
+              existingOrder => existingOrder._id === newOrder._id
+            ) && newOrder.status === 'pending'
           );
 
           if (newOrdersReceived.length > 0) {
+            console.log(`🆕 ${newOrdersReceived.length} new order(s) detected!`);
+
+            // ✅ PLAY NOTIFICATION SOUND
+            playOrderNotificationSound();
+
+            // ✅ VIBRATE ON MOBILE
+            if ('vibrate' in navigator) {
+              navigator.vibrate([200, 100, 200]);
+            }
+
+            // ✅ BROWSER NOTIFICATION
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const totalAmount = newOrdersReceived.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+              new Notification('🍔 New Order Received!', {
+                body: `${newOrdersReceived.length} new order${newOrdersReceived.length > 1 ? 's' : ''} • ${formatCurrency(totalAmount)}`,
+                icon: '/logo.png',
+                badge: '/badge.png',
+                tag: 'new-order',
+                requireInteraction: true
+              });
+            }
+
             setNewOrdersCount(prev => prev + newOrdersReceived.length);
-            playNotificationSound();
-            toast.success(`${newOrdersReceived.length} new order${newOrdersReceived.length > 1 ? 's' : ''} received!`);
+            toast.success(
+              `🔔 ${newOrdersReceived.length} new order${newOrdersReceived.length > 1 ? 's' : ''} received!`,
+              { duration: 5000, icon: '🔔' }
+            );
           }
         }
+
+        // Update reference for next comparison
+        previousOrdersRef.current = newOrders;
 
         setOrders(newOrders);
         setStats(newStats);
@@ -663,11 +747,107 @@ const RestaurantOrders = () => {
   };
 
   const getFilteredOrders = () => {
+    if (selectedStatus === 'today') {
+      // Filter orders from today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return orders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        orderDate.setHours(0, 0, 0, 0);
+        return orderDate.getTime() === today.getTime();
+      });
+    }
+
     if (selectedStatus === 'all') return orders;
     return orders.filter(order => order.status === selectedStatus);
   };
 
+  // Calculate today's stats
+  const getTodayStats = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate.getTime() === today.getTime();
+    });
+
+    const todayRevenue = todayOrders
+      .filter(order => order.status === 'delivered')
+      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+    const pendingToday = todayOrders.filter(o => o.status === 'pending').length;
+    const completedToday = todayOrders.filter(o => o.status === 'delivered').length;
+
+    return {
+      totalOrders: todayOrders.length,
+      revenue: todayRevenue,
+      pending: pendingToday,
+      completed: completedToday,
+      avgOrderValue: todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0
+    };
+  };
+
+  const groupOrdersByTime = (orders) => {
+    const morning = []; // 6 AM - 12 PM
+    const afternoon = []; // 12 PM - 5 PM
+    const evening = []; // 5 PM - 9 PM
+    const night = []; // 9 PM - 6 AM
+
+    orders.forEach(order => {
+      const hour = new Date(order.createdAt).getHours();
+
+      if (hour >= 6 && hour < 12) morning.push(order);
+      else if (hour >= 12 && hour < 17) afternoon.push(order);
+      else if (hour >= 17 && hour < 21) evening.push(order);
+      else night.push(order);
+    });
+
+    return { morning, afternoon, evening, night };
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const getYesterdayComparison = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate.getTime() === today.getTime();
+    });
+
+    const yesterdayOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate.getTime() === yesterday.getTime();
+    });
+
+    const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const yesterdayRevenue = yesterdayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    const ordersDiff = todayOrders.length - yesterdayOrders.length;
+    const revenueDiff = todayRevenue - yesterdayRevenue;
+
+    return {
+      ordersDiff,
+      revenueDiff,
+      ordersPercentage: yesterdayOrders.length > 0
+        ? ((ordersDiff / yesterdayOrders.length) * 100).toFixed(1)
+        : 0,
+      revenuePercentage: yesterdayRevenue > 0
+        ? ((revenueDiff / yesterdayRevenue) * 100).toFixed(1)
+        : 0
+    };
+  };
+
   const filteredOrders = getFilteredOrders();
+  const todayStats = getTodayStats();
 
   if (isLoading) {
     return (
@@ -679,6 +859,55 @@ const RestaurantOrders = () => {
       </div>
     );
   }
+
+  const NotificationSettingsPanel = () => (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-4 mb-6 border-2 border-blue-200">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+            <span className="text-2xl">🔔</span>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Order Notifications</h3>
+            <p className="text-sm text-gray-600">
+              {notificationEnabled ? 'Sound alerts enabled' : 'Sound alerts disabled'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Test Sound Button */}
+          <button
+            onClick={() => {
+              playOrderNotificationSound();
+              if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+              }
+              toast.success('🔔 Test notification played!', { duration: 2000 });
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            <span>🔊</span>
+            Test Sound
+          </button>
+
+          {/* Enable/Disable Toggle */}
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notificationEnabled}
+              onChange={(e) => setNotificationEnabled(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-7 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+            <span className="ml-3 text-sm font-medium text-gray-900">
+              {notificationEnabled ? 'ON' : 'OFF'}
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -729,10 +958,75 @@ const RestaurantOrders = () => {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* ✅ ADD NOTIFICATION SETTINGS PANEL HERE */}
+        <NotificationSettingsPanel />
+
+        {/* Today's Overview Card */}
+        <div className="bg-gradient-to-r from-orange-500 to-yellow-400 rounded-2xl shadow-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <span>📅</span>
+                Today's Orders
+              </h2>
+              <p className="text-white/90 text-sm mt-1">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedStatus('today')}
+              className="bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
+            >
+              View All Today's Orders →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+              <div className="text-white/80 text-sm mb-1">Total Orders</div>
+              <div className="text-3xl font-bold text-white">{todayStats.totalOrders}</div>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+              <div className="text-white/80 text-sm mb-1">Revenue</div>
+              <div className="text-3xl font-bold text-white">
+                {formatCurrency(todayStats.revenue)}
+              </div>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+              <div className="text-white/80 text-sm mb-1">Pending</div>
+              <div className="text-3xl font-bold text-white">{todayStats.pending}</div>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+              <div className="text-white/80 text-sm mb-1">Completed</div>
+              <div className="text-3xl font-bold text-white">{todayStats.completed}</div>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
           {statusOptions.map((status) => {
-            const count = status.value === 'all' ? orders.length : (stats[status.value] || 0);
+            let count = 0;
+
+            if (status.value === 'all') {
+              count = orders.length;
+            } else if (status.value === 'today') {
+              // Count today's orders
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              count = orders.filter(order => {
+                const orderDate = new Date(order.createdAt);
+                orderDate.setHours(0, 0, 0, 0);
+                return orderDate.getTime() === today.getTime();
+              }).length;
+            } else {
+              count = stats[status.value] || 0;
+            }
             return (
               <button
                 key={status.value}
@@ -758,6 +1052,38 @@ const RestaurantOrders = () => {
             );
           })}
         </div>
+
+        {/* Time-based grouping for today's orders */}
+        {selectedStatus === 'today' && filteredOrders.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Orders by Time Period
+            </h3>
+            {(() => {
+              const grouped = groupOrdersByTime(filteredOrders);
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
+                    <div className="text-sm text-yellow-800">🌅 Morning (6-12)</div>
+                    <div className="text-2xl font-bold text-yellow-900">{grouped.morning.length}</div>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-200">
+                    <div className="text-sm text-orange-800">☀️ Afternoon (12-5)</div>
+                    <div className="text-2xl font-bold text-orange-900">{grouped.afternoon.length}</div>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+                    <div className="text-sm text-purple-800">🌆 Evening (5-9)</div>
+                    <div className="text-2xl font-bold text-purple-900">{grouped.evening.length}</div>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div className="text-sm text-blue-800">🌙 Night (9-6)</div>
+                    <div className="text-2xl font-bold text-blue-900">{grouped.night.length}</div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Orders List */}
         {filteredOrders.length > 0 ? (

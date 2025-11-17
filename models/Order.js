@@ -267,6 +267,17 @@ const orderSchema = new mongoose.Schema({
   cancelledBy: {
     type: String,
     enum: ['student', 'restaurant', 'admin']
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  archivedAt: {
+    type: Date
+  },
+  archivedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true,
