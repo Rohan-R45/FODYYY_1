@@ -2,13 +2,18 @@ const admin = require('firebase-admin');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// Ensure admin is required at the top
 if (!admin) {
   throw new Error('Firebase Admin SDK not installed. Run: npm install firebase-admin');
 }
 
-// Initialize Firebase Admin SDK
 let firebaseInitialized = false;
+
+const isValidFCMToken = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  if (token.trim().length < 10) return false;
+  if (token === '0' || token === 'undefined' || token === 'null') return false;
+  return true;
+};
 
 const initializeFirebase = () => {
   if (firebaseInitialized) return;
@@ -70,7 +75,18 @@ const sendNotificationToUser = async (userId, notification, data = {}) => {
       return { success: false, message: 'Status update notifications disabled' };
     }
 
-    const tokens = user.fcmTokens.map(token => token.token);
+    const tokens = user.fcmTokens.map(token => token.token).filter(token => isValidFCMToken(token));
+    
+    if (tokens.length === 0) {
+      console.log(`ℹ️ No valid FCM tokens found for user ${userId}`);
+      
+      await User.updateOne(
+        { _id: userId },
+        { $set: { fcmTokens: [] } }
+      );
+      
+      return { success: false, message: 'No valid FCM tokens found for user' };
+    }
 
     const messages = tokens.map(token => ({
       notification: {
@@ -110,7 +126,8 @@ const sendNotificationToUser = async (userId, notification, data = {}) => {
         if (!resp.success) {
           console.log(`❌ Failed to send to token ${index}:`, resp.error);
           if (resp.error.code === 'messaging/registration-token-not-registered' ||
-              resp.error.code === 'messaging/invalid-registration-token') {
+              resp.error.code === 'messaging/invalid-registration-token' ||
+              resp.error.code === 'messaging/invalid-argument') {
             invalidTokens.push(tokens[index]);
           }
         }
@@ -229,7 +246,11 @@ const sendOrderStatusNotification = async (orderId, restaurantId, status) => {
  */
 const registerFCMToken = async (userId, token, deviceId, deviceType = 'web') => {
   try {
-    // Remove any existing token for this device
+    if (!isValidFCMToken(token)) {
+      console.log(`⚠️ Invalid FCM token format for user ${userId}: ${token}`);
+      return { success: false, message: 'Invalid FCM token format' };
+    }
+
     await User.updateOne(
       { _id: userId },
       {
@@ -237,7 +258,6 @@ const registerFCMToken = async (userId, token, deviceId, deviceType = 'web') => 
       }
     );
 
-    // Add the new token
     const updateResult = await User.updateOne(
       { _id: userId },
       {
