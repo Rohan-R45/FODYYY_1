@@ -2,6 +2,11 @@ const admin = require('firebase-admin');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
+// Ensure admin is required at the top
+if (!admin) {
+  throw new Error('Firebase Admin SDK not installed. Run: npm install firebase-admin');
+}
+
 // Initialize Firebase Admin SDK
 let firebaseInitialized = false;
 
@@ -67,12 +72,10 @@ const sendNotificationToUser = async (userId, notification, data = {}) => {
 
     const tokens = user.fcmTokens.map(token => token.token);
 
-    const message = {
+    const messages = tokens.map(token => ({
       notification: {
         title: notification.title,
         body: notification.body,
-        sound: user.notificationPreferences?.soundEnabled ? 'default' : undefined,
-        badge: '1'
       },
       data: {
         type: notification.type,
@@ -81,10 +84,19 @@ const sendNotificationToUser = async (userId, notification, data = {}) => {
         studentId: data.studentId || '',
         ...data
       },
-      tokens: tokens
-    };
+      token: token,
+      webpush: {
+        headers: {
+          Urgency: 'high'
+        },
+        notification: {
+          requireInteraction: true,
+          vibrate: '200,100,200'
+        }
+      }
+    }));
 
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEach(messages);
 
     console.log(`✅ Notification sent to user ${userId}:`, {
       successCount: response.successCount,
