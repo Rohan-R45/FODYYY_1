@@ -228,6 +228,19 @@ export const requestNotificationPermission = async () => {
       };
     }
 
+    // Register service worker first
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+          scope: '/'
+        });
+        console.log('✅ Service Worker registered:', registration);
+      } catch (error) {
+        console.error('❌ Service Worker registration failed:', error);
+        throw error;
+      }
+    }
+
     // Request permission
     const permission = await Notification.requestPermission();
 
@@ -238,9 +251,11 @@ export const requestNotificationPermission = async () => {
       };
     }
 
-    // Get FCM token
+    // Get FCM token with service worker
+    const registration = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration
     });
 
     if (!token) {
@@ -250,7 +265,7 @@ export const requestNotificationPermission = async () => {
       };
     }
 
-    console.log('✅ FCM token obtained:', token);
+    console.log('✅ FCM token obtained:', token.substring(0, 20) + '...');
 
     return {
       success: true,
@@ -308,27 +323,18 @@ export const onMessageListener = (callback) => {
  */
 export const registerFCMToken = async (token, deviceId) => {
   try {
-    const response = await fetch('/api/auth/register-fcm-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        token,
-        deviceId,
-        deviceType: 'web'
-      })
+    const response = await api.post('/auth/register-fcm-token', {
+      token,
+      deviceId,
+      deviceType: 'web'
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
+    if (response.data.success) {
       console.log('✅ FCM token registered with backend');
-      return { success: true, data };
+      return { success: true, data: response.data };
     } else {
-      console.error('❌ Failed to register FCM token:', data.message);
-      return { success: false, error: data.message };
+      console.error('❌ Failed to register FCM token:', response.data.message);
+      return { success: false, error: response.data.message };
     }
 
   } catch (error) {
@@ -344,25 +350,16 @@ export const registerFCMToken = async (token, deviceId) => {
  */
 export const unregisterFCMToken = async (deviceId) => {
   try {
-    const response = await fetch('/api/auth/unregister-fcm-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        deviceId
-      })
+    const response = await api.post('/auth/unregister-fcm-token', {
+      deviceId
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
+    if (response.data.success) {
       console.log('✅ FCM token unregistered from backend');
-      return { success: true, data };
+      return { success: true, data: response.data };
     } else {
-      console.error('❌ Failed to unregister FCM token:', data.message);
-      return { success: false, error: data.message };
+      console.error('❌ Failed to unregister FCM token:', response.data.message);
+      return { success: false, error: response.data.message };
     }
 
   } catch (error) {
@@ -378,23 +375,14 @@ export const unregisterFCMToken = async (deviceId) => {
  */
 export const updateNotificationPreferences = async (preferences) => {
   try {
-    const response = await fetch('/api/auth/notification-preferences', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(preferences)
-    });
+    const response = await api.put('/auth/notification-preferences', preferences);
 
-    const data = await response.json();
-
-    if (response.ok) {
+    if (response.data.success) {
       console.log('✅ Notification preferences updated');
-      return { success: true, data };
+      return { success: true, data: response.data };
     } else {
-      console.error('❌ Failed to update notification preferences:', data.message);
-      return { success: false, error: data.message };
+      console.error('❌ Failed to update notification preferences:', response.data.message);
+      return { success: false, error: response.data.message };
     }
 
   } catch (error) {

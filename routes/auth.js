@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { User, Restaurant, OTP } = require('../models');
 const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+const { registerFCMToken, unregisterFCMToken, updateNotificationPreferences } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -844,6 +845,75 @@ router.post('/verify-email-otp', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to verify OTP. Please try again.',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+router.post('/register-fcm-token', protect, async (req, res) => {
+  try {
+    const { token, deviceId, deviceType } = req.body;
+
+    if (!token || !deviceId) {
+      return res.status(400).json({
+        success: false,
+        message: 'FCM token and device ID are required'
+      });
+    }
+
+    const result = await registerFCMToken(req.user._id, token, deviceId, deviceType || 'web');
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Register FCM token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register FCM token',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+router.post('/unregister-fcm-token', protect, async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Device ID is required'
+      });
+    }
+
+    const result = await unregisterFCMToken(req.user._id, deviceId);
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Unregister FCM token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unregister FCM token',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+router.put('/notification-preferences', protect, async (req, res) => {
+  try {
+    const { orderNotifications, statusUpdates, soundEnabled } = req.body;
+
+    const result = await updateNotificationPreferences(req.user._id, {
+      orderNotifications,
+      statusUpdates,
+      soundEnabled
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Update notification preferences error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update notification preferences',
       ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
   }

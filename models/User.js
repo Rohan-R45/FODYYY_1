@@ -71,6 +71,33 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  fcmTokens: [{
+    token: String,
+    deviceId: String,
+    deviceType: {
+      type: String,
+      enum: ['android', 'ios', 'web'],
+      default: 'web'
+    },
+    lastUsed: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  notificationPreferences: {
+    orderNotifications: {
+      type: Boolean,
+      default: true
+    },
+    statusUpdates: {
+      type: Boolean,
+      default: true
+    },
+    soundEnabled: {
+      type: Boolean,
+      default: true
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
